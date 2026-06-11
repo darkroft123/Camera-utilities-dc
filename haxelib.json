@@ -1,0 +1,12 @@
+{
+  "name": "camera-utilities-dc",
+  "url": "https://github.com/darkroft123/Camera-utilities-dc",
+  "license": "MIT",
+  "tags": ["haxe", "camera", "fnf", "flixel"],
+  "description": "Camera utilities for HaxeFlixel / FNF projects",
+  "version": "1.0.0",
+  "classPath": "src/",
+  "releasenote": "Initial release",
+  "contributors": ["darkroft123"],
+  "dependencies": {}
+}
