@@ -1,4 +1,4 @@
-package;
+package camera;
 
 import flixel.FlxG;
 import flixel.FlxSprite;
@@ -11,11 +11,12 @@ import game.Conductor;
 import game.SoundGroup;
 import game.SongLoader;
 import states.PlayState;
-
+import states.MusicBeatState;
+import states.MainMenuState;
 import components.MenuBarComponent;
 import components.AudioComponent;
 import components.SongInfoComponent;
-
+import camera.utilities.CameraUtilities;
 class ModchartFX extends MusicBeatState
 {
 	var songStarted:Bool = false;
@@ -27,12 +28,9 @@ class ModchartFX extends MusicBeatState
 	var beatSnap:Int = 16;
 	var curSection:Int = 0;
 
-	// ================= COMPONENTS =================
 	var audio:AudioComponent;
 	var menuBar:MenuBarComponent;
 	var songInfo:SongInfoComponent;
-
-	// ================= MENU DATA =================
 	var menus:Array<MenuData>;
 
 	var activeMenuIndex:Int = -1;
@@ -43,7 +41,6 @@ class ModchartFX extends MusicBeatState
 	var menuItems:Array<FlxText> = [];
 	var menuItemBGs:Array<FlxSprite> = [];
 
-	// ================= VISUAL =================
 	var songPosInfo:FlxText;
 	var songedits:FlxText;
 
@@ -51,25 +48,23 @@ class ModchartFX extends MusicBeatState
 	var cubonegro:FlxSprite;
 	var lineablanca:FlxSprite;
 
-	// ================= INIT =================
+
 	override function create()
 	{
 		super.create();
 		FlxG.mouse.visible = true;
 
-		// BG
 		var bg = new FlxSprite();
 		bg.makeGraphic(FlxG.width * 2, FlxG.height * 2, FlxColor.fromRGB(25,21,36));
 		bg.screenCenter();
 		add(bg);
 
-		// TOP BAR
+		
 		var barrita = new FlxSprite();
 		barrita.makeGraphic(FlxG.width * 2, 30, FlxColor.BLACK);
 		barrita.screenCenter(X);
 		add(barrita);
 
-		// ================= MENUS =================
 		menus = [
 			{name:"File", items:["Save","Exit"]},
 			{name:"Edit", items:["Copy","Paste","Cut","Delete","Shift Left","Shift Right"]},
@@ -80,7 +75,7 @@ class ModchartFX extends MusicBeatState
 			{name:"Snap >", items:["16","20","24"]}
 		];
 
-		// ================= COMPONENTS =================
+		
 
 		audio = new AudioComponent();
 
@@ -88,7 +83,7 @@ class ModchartFX extends MusicBeatState
 
 		songInfo = new SongInfoComponent();
 
-		// ================= TEXT UI =================
+		
 
 		songPosInfo = songInfo.posText;
 		songedits = songInfo.songText;
@@ -96,7 +91,6 @@ class ModchartFX extends MusicBeatState
 		add(songPosInfo);
 		add(songedits);
 
-		// ================= AUDIO LOAD =================
 
 		if (FlxG.sound.music != null)
 		{
@@ -116,14 +110,13 @@ class ModchartFX extends MusicBeatState
 
 		audio.pause();
 
-		// ================= CONDUCTOR =================
 		Conductor.changeBPM(PlayState.SONG.bpm);
 		Conductor.songPosition = 0;
 
 		songStarted = false;
 	}
 
-	// ================= MENU ACTION =================
+
 	function handleMenuAction(menuName:String, itemIndex:Int):Void
 	{
 		switch (menuName)
@@ -283,7 +276,7 @@ class ModchartFX extends MusicBeatState
 		songInfo.updateInfo(
 			PlayState.SONG.song,
 			PlayState.storyDifficultyStr,
-			CoolUtil.timeToStr(Conductor.songPosition),
+			CameraUtilities.timeToStr(Conductor.songPosition),
 			curStep,
 			curBeat,
 			curSection,
