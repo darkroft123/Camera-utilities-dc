@@ -2,25 +2,29 @@ package components;
 
 import flixel.FlxSprite;
 import flixel.util.FlxColor;
+import camera.ModchartFX;
 
 class SongBackgroundComponent
 {
-	public var gray:FlxSprite;
-	public var black:FlxSprite;
-	public var line:FlxSprite;
+	var state:ModchartFX;
 
-	public function new()
+	public function new(state:ModchartFX)
 	{
-		gray = new FlxSprite(0, 720 - 330).makeGraphic(1285, 320, FlxColor.GRAY);
-		gray.screenCenter(X);
-		gray.scrollFactor.set(0, 0);
+		this.state = state;
 
-		black = new FlxSprite(0, 720 - 320).makeGraphic(1285, 320, FlxColor.BLACK);
-		black.screenCenter(X);
-		black.scrollFactor.set(0, 0);
+		state.cubogris = new FlxSprite(0, 720-330).makeGraphic(1285, 320, FlxColor.GRAY);
+		state.cubogris.screenCenter(X);
+		state.cubogris.scrollFactor.set(0,0);
+		state.add(state.cubogris);
 
-		line = new FlxSprite(0, 720 - 280).makeGraphic(1285, 10, FlxColor.WHITE);
-		line.screenCenter(X);
-		line.scrollFactor.set(0, 0);
+		state.cubonegro = new FlxSprite(0, 720-320).makeGraphic(1285, 320, FlxColor.BLACK);
+		state.cubonegro.screenCenter(X);
+		state.cubonegro.scrollFactor.set(0,0);
+		state.add(state.cubonegro);
+
+		state.lineablanca = new FlxSprite(0, 720-280).makeGraphic(1285, 10, FlxColor.WHITE);
+		state.lineablanca.screenCenter(X);
+		state.lineablanca.scrollFactor.set(0,0);
+		state.add(state.lineablanca);
 	}
 }

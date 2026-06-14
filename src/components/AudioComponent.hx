@@ -1,53 +1,47 @@
 package components;
 
+import flixel.FlxG;
 import flixel.sound.FlxSound;
 import game.SoundGroup;
+import states.PlayState;
+import camera.ModchartFX;
 
 class AudioComponent
 {
-	public var music:FlxSound;
-	public var vocals:SoundGroup;
-	public var playbackSpeed:Float = 1;
+	var state:ModchartFX;
 
-	public function new() {}
-
-	public function load(instPath:String, ?voicePath:String)
+	public function new(state:ModchartFX)
 	{
-		music = new FlxSound().loadEmbedded(instPath);
-		vocals = new SoundGroup(2);
+		this.state = state;
+	}
 
-		if (voicePath != null)
+	public function create(owner:ModchartFX):Void
+	{
+		if (FlxG.sound.music != null)
 		{
-			var v = new FlxSound().loadEmbedded(voicePath);
-			vocals.add(v);
+			FlxG.sound.music.stop();
+			FlxG.sound.music.destroy();
 		}
-	}
 
-	public function play()
-	{
-		music.play();
-		vocals.play();
-	}
+		FlxG.sound.music = new FlxSound().loadEmbedded(
+			Paths.inst(PlayState.SONG.song, PlayState.storyDifficultyStr)
+		);
+		FlxG.sound.list.add(FlxG.sound.music);
+		FlxG.sound.music.pause();
+		FlxG.sound.music.time = 0;
 
-	public function pause()
-	{
-		music.pause();
-		vocals.pause();
-	}
+		owner.vocals = new SoundGroup(2);
 
-	public function resume()
-	{
-		music.resume();
-		vocals.resume();
-		vocals.time = music.time;
-	}
+		if (PlayState.SONG.needsVoices)
+		{
+			var v = new FlxSound().loadEmbedded(
+				Paths.voices(PlayState.SONG.song, PlayState.storyDifficultyStr)
+			);
+			FlxG.sound.list.add(v);
+			owner.vocals.add(v);
+		}
 
-	public function setSpeed(v:Float)
-	{
-		playbackSpeed = v;
-		#if FLX_PITCH
-		music.pitch = v;
-		vocals.pitch = v;
-		#end
+		owner.vocals.pause();
+		owner.vocals.time = 0;
 	}
 }
