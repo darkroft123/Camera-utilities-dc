@@ -19,7 +19,10 @@ import components.MenuDropdownComponent;
 import components.AudioComponent;
 import components.SongInfoComponent;
 import components.SongBackgroundComponent;
-
+import components.EditorPreviewCameraComponent;
+import flixel.FlxCamera;
+import flixel.FlxObject;
+import flixel.math.FlxPoint;
 @:publicFields
 typedef MenuData =
 {
@@ -69,14 +72,33 @@ class ModchartFX extends MusicBeatState
 	var menuDropdown:MenuDropdownComponent;
 	var audio:AudioComponent;
 	var songInfo:SongInfoComponent;
+	var editorPreview:EditorPreviewCameraComponent;
+	var editorCam:FlxCamera;
+
+	var uiCam:FlxCamera;
+	var previewCam:FlxCamera;
 
 	override function create()
 	{
 		super.create();
 		FlxG.mouse.visible = true;
 
+		uiCam = new FlxCamera();
+		uiCam.bgColor = 0;
+
+		previewCam = new FlxCamera();
+		previewCam.setSize(520, 350);
+
+		previewCam.x = (FlxG.width - previewCam.width) * 0.5;
+		previewCam.y = 40;
+
+		previewCam.bgColor = FlxColor.BLACK;
+
+		FlxG.cameras.add(previewCam, false);
+		FlxG.cameras.add(uiCam, false);
+
 		var bg = new FlxSprite(0, 0);
-		bg.makeGraphic(FlxG.width * 2, FlxG.height * 2, FlxColor.fromRGB(25,21,36));
+		bg.makeGraphic(FlxG.width * 2, FlxG.height * 2, FlxColor.fromRGB(25, 21, 36));
 		bg.screenCenter();
 		bg.antialiasing = true;
 		add(bg);
@@ -85,6 +107,7 @@ class ModchartFX extends MusicBeatState
 		barrita.makeGraphic(FlxG.width * 2, 30, COL_TOPBAR);
 		barrita.screenCenter(X);
 		barrita.y += 1;
+		barrita.cameras = [uiCam];
 		add(barrita);
 
 		songInfo = new SongInfoComponent(this);
@@ -102,11 +125,11 @@ class ModchartFX extends MusicBeatState
 			{name:"Snap >", items:["16","20","24"]}
 		];
 
-		menuBar = new MenuBarComponent(this);
+		menuBar = new MenuBarComponent(this, uiCam);
 		menuBar.create(this);
 
-		menuDropdown = new MenuDropdownComponent(this);
-
+		menuDropdown = new MenuDropdownComponent(this, uiCam);
+		
 		audio = new AudioComponent(this);
 		audio.create(this);
 
@@ -114,9 +137,9 @@ class ModchartFX extends MusicBeatState
 		Conductor.songPosition = 0;
 		songStarted = false;
 
+		editorPreview = new EditorPreviewCameraComponent(this, previewCam);
+		editorPreview.create(this);
 	}
-
-
 	function handleMenuAction(menuName:String, itemIndex:Int):Void
 {
 	switch (menuName)
@@ -195,6 +218,7 @@ class ModchartFX extends MusicBeatState
 		curBeat = 0;
 
 		songStarted = true;
+
 	}
 
 
@@ -235,6 +259,7 @@ class ModchartFX extends MusicBeatState
 		curBeat = 0;
 		curSection = 0; 
 		songStarted = false;
+
 	}
 
 
@@ -333,6 +358,7 @@ class ModchartFX extends MusicBeatState
 
 	songInfo.updateDisplay(this);
 
+
 	if (controls.BACK)
 	{
 		if (menuBg != null) closeMenu();
@@ -407,6 +433,7 @@ function resetSection(songBeginning:Bool = false):Void {
 
 				Conductor.songPosition = FlxG.sound.music.time = vocals.time = sectionStartTime(sec);
 				updateCurStep();
+
 			}
 
 		}
