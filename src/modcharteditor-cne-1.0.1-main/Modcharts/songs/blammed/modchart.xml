@@ -1,0 +1,388 @@
+<Modchart>
+	<Init>
+		<Shader camHUD="true" camOther="false" camGame="true" shader="colorswap" name="colorswap" color="#545454">
+			<Property value="0" name="brt"/>
+			<Property value="0" name="sat"/>
+			<Property value="0" name="hue"/>
+		</Shader>
+		<Shader camHUD="false" camOther="false" camGame="true" shader="M/Sunrays" name="GodRay" color="#545454">
+			<Property value="0.8" name="ksum"/>
+			<Property value="1" name="eatt"/>
+			<Property value="0.6" name="hh"/>
+			<Property value="50" name="num_samples"/>
+			<Property value="0" name="iTime"/>
+			<Property value="0.4" name="kstep"/>
+		</Shader>
+		<Shader camHUD="true" camOther="false" camGame="true" shader="MirrorRepeatWarpEffect" name="Mirror" color="#545454">
+			<Property value="0" name="warp"/>
+			<Property value="0" name="x"/>
+			<Property value="0" name="y"/>
+			<Property value="5" name="zoom"/>
+			<Property value="0" name="angle"/>
+		</Shader>
+		<Shader camHUD="false" camOther="false" camGame="true" shader="MirrorRepeatWarpEffect" name="mirrorGame" color="#545454">
+			<Property value="0" name="warp"/>
+			<Property value="0" name="x"/>
+			<Property value="0" name="y"/>
+			<Property value="1" name="zoom"/>
+			<Property value="0" name="angle"/>
+		</Shader>
+		<Shader camHUD="true" camOther="false" camGame="false" shader="MirrorRepeatWarpEffect" name="mirrorHud" color="#545454">
+			<Property value="0" name="warp"/>
+			<Property value="0" name="x"/>
+			<Property value="0" name="y"/>
+			<Property value="1" name="zoom"/>
+			<Property value="0" name="angle"/>
+		</Shader>
+		<Shader camHUD="true" camOther="false" camGame="true" shader="PerlinSmokeEffect" name="Smoke" color="#545454">
+			<Property value="0" name="smokeStrength"/>
+			<Property value="0" name="waveStrength"/>
+			<Property value="0" name="iTime"/>
+		</Shader>
+		<Shader camHUD="true" camOther="false" camGame="true" shader="barscolor" name="bars" color="#545454">
+			<Property value="0" name="angle1"/>
+			<Property value="40" name="angle2"/>
+			<Property value="0.5" name="effect2"/>
+			<Property value="0" name="effect"/>
+		</Shader>
+		<Shader camHUD="true" camOther="false" camGame="true" shader="BloomEffect" name="Bloom" color="#545454">
+			<Property value="1" name="contrast"/>
+			<Property value="0" name="strength"/>
+			<Property value="1" name="effect"/>
+			<Property value="0" name="brightness"/>
+		</Shader>
+		<Shader camHUD="true" camOther="false" camGame="true" shader="BarrelBlurEffect" name="BarrelBlur" color="#545454">
+			<Property value="0" name="x"/>
+			<Property value="0" name="doChroma"/>
+			<Property value="0" name="y"/>
+			<Property value="0" name="barrel"/>
+			<Property value="1" name="zoom"/>
+			<Property value="0" name="angle"/>
+		</Shader>
+		<Shader camHUD="true" camOther="false" camGame="true" shader="ChromAbEffect" name="ChromAb" color="#545454">
+			<Property value="0" name="strength"/>
+		</Shader>
+		<Shader camHUD="true" camOther="false" camGame="false" shader="RaymarchDepthEffect" name="RaymarchHud" color="#545454">
+			<Property value="0" name="boxDepth"/>
+			<Property value="0" name="boxAngleX0"/>
+			<Property value="0" name="pitch"/>
+			<Property value="0" name="x"/>
+			<Property value="0" name="boxZ0"/>
+			<Property value="0" name="y"/>
+			<Property value="0" name="boxY0"/>
+			<Property value="2.1" name="z"/>
+			<Property value="0" name="boxX0"/>
+			<Property value="0" name="tilt"/>
+			<Property value="0" name="boxAngleZ0"/>
+			<Property value="0" name="boxAngleY0"/>
+			<Property value="-90" name="yaw"/>
+		</Shader>
+		<Modifier strumID="-1" strumLineID="0" value="0" name="xO" modifier="x" color="#545454"/>
+		<Modifier strumID="-1" strumLineID="0" value="0" name="yO" modifier="y" color="#545454"/>
+		<Modifier strumID="-1" strumLineID="0" value="0" name="zO" modifier="z" color="#545454"/>
+		<Modifier strumID="-1" strumLineID="1" value="0" name="xP" modifier="x" color="#545454"/>
+		<Modifier strumID="-1" strumLineID="1" value="0" name="yP" modifier="y" color="#545454"/>
+		<Modifier strumID="-1" strumLineID="-1" value="0" name="zP" modifier="z" color="#545454"/>
+		<Modifier strumID="-1" strumLineID="-1" value="0" name="angleZ" modifier="angleZ" color="#545454"/>
+	</Init>
+	<Events>
+		<Event step="0" time="0" value="0" property="zoom" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="mirrorHud"/>
+		<Event step="0" time="0" value="-0.6" property="strength" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="Bloom"/>
+		<Event step="0" time="4" value="0.4" property="effect2" ease="backOut" type="tweenShaderProperty" startValue="0.5" name="bars"/>
+		<Event step="32" time="4" value="0.3" property="effect2" ease="backOut" type="tweenShaderProperty" startValue="0.4" name="bars"/>
+		<Event step="32" time="4" value="35" property="angle" ease="expoOut" type="tweenShaderProperty" startValue="0" name="Mirror"/>
+		<Event step="32" time="4" value="39" property="angle2" ease="backOut" type="tweenShaderProperty" startValue="40" name="bars"/>
+		<Event step="32" time="4" value="-0.3" property="strength" ease="cubeInOut" type="tweenShaderProperty" startValue="-0.6" name="Bloom"/>
+		<Event step="32" time="4" value="4" property="zoom" ease="backOut" type="tweenShaderProperty" startValue="5" name="Mirror"/>
+		<Event step="64" time="4" value="-35" property="angle" ease="expoOut" type="tweenShaderProperty" startValue="35" name="Mirror"/>
+		<Event step="64" time="4" value="38" property="angle2" ease="backOut" type="tweenShaderProperty" startValue="39" name="bars"/>
+		<Event step="64" time="4" value="3" property="zoom" ease="backOut" type="tweenShaderProperty" startValue="4" name="Mirror"/>
+		<Event step="64" time="4" value="0.2" property="effect2" ease="backOut" type="tweenShaderProperty" startValue="0.3" name="bars"/>
+		<Event step="96" time="24" value="0" property="strength" ease="cubeInOut" type="tweenShaderProperty" startValue="-0.3" name="Bloom"/>
+		<Event step="96" time="4" value="-0.3" property="effect2" ease="expoOut" type="tweenShaderProperty" startValue="0.2" name="bars"/>
+		<Event step="96" time="4" value="0" property="angle" ease="expoOut" type="tweenShaderProperty" startValue="-35" name="Mirror"/>
+		<Event step="112" time="16" value="1" property="zoom" ease="smootherStepInOut" type="tweenShaderProperty" startValue="3" name="Mirror"/>
+		<Event step="113" time="4" value="700" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="0" name="xP"/>
+		<Event step="113" time="4" value="320" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="0" name="xO"/>
+		<Event step="127" time="0" value="1" property="doChroma" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="BarrelBlur"/>
+		<Event step="128" time="8" value="1" property="zoom" ease="backOut" type="tweenShaderProperty" startValue="0" name="mirrorHud"/>
+		<Event step="128" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="132" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="136" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="136" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="140" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="144" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="148" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="148" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="152" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="156" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="160" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="160" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="164" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="168" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="168" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="172" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="176" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="180" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="180" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="184" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="185" time="8" value="360" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="0" name="angleZ"/>
+		<Event step="185" time="8" value="-700" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="320" name="xO"/>
+		<Event step="185" time="8" value="-320" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="700" name="xP"/>
+		<Event step="187" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="191" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="192" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="196" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="200" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="200" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="204" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="208" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="212" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="212" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="216" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="220" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="224" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="224" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="228" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="232" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="232" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="236" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="240" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="244" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="244" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="248" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="252" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="254" time="8" value="0" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="360" name="angleZ"/>
+		<Event step="254" time="8" value="320" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="-700" name="xO"/>
+		<Event step="254" time="8" value="700" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="-320" name="xP"/>
+		<Event step="256" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="256" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="260" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="264" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="264" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="268" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="272" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="276" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="276" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="280" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="284" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="288" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="288" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="292" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="296" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="296" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="300" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="304" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="308" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="308" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="312" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="313" time="8" value="360" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="0" name="angleZ"/>
+		<Event step="313" time="8" value="-320" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="700" name="xP"/>
+		<Event step="313" time="8" value="-700" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="320" name="xO"/>
+		<Event step="316" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="320" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="320" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="324" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="328" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="328" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="332" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="336" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="340" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="340" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="344" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="348" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="352" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="352" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="356" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="360" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="360" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="364" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="368" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="372" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="372" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="376" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="384" time="4" value="0" property="zoom" ease="backOut" type="tweenShaderProperty" startValue="1" name="mirrorHud"/>
+		<Event step="384" time="4" value="0.8" property="zoom" ease="expoOut" type="tweenShaderProperty" startValue="1" name="Mirror"/>
+		<Event step="416" time="4" value="1" property="x" ease="backOut" type="tweenShaderProperty" startValue="0" name="Mirror"/>
+		<Event step="446" time="4" value="1" property="zoom" ease="backOut" type="tweenShaderProperty" startValue="0" name="mirrorHud"/>
+		<Event step="448" time="4" value="0" property="x" ease="backOut" type="tweenShaderProperty" startValue="1" name="Mirror"/>
+		<Event step="448" time="4" value="0.9" property="zoom" ease="cubeInOut" type="tweenShaderProperty" startValue="0.8" name="Mirror"/>
+		<Event step="482" time="4" value="-1" property="x" ease="expoOut" type="tweenShaderProperty" startValue="0" name="mirrorGame"/>
+		<Event step="482" time="2" value="0.9" property="zoom" ease="backOut" type="tweenShaderProperty" startValue="1" name="mirrorGame"/>
+		<Event step="484" time="4" value="0.8" property="zoom" ease="expoOut" type="tweenShaderProperty" startValue="0.9" name="mirrorGame"/>
+		<Event step="510" time="8" value="320" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="-700" name="xO"/>
+		<Event step="510" time="8" value="700" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="-320" name="xP"/>
+		<Event step="510" time="8" value="0" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="360" name="angleZ"/>
+		<Event step="512" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="512" time="256" value="6.4" property="hue" ease="linear" type="tweenShaderProperty" startValue="0" name="colorswap"/>
+		<Event step="512" time="4" value="0.025" property="waveStrength" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="Smoke"/>
+		<Event step="512" time="256" value="6.4" property="smokeStrength" ease="linear" type="tweenShaderProperty" startValue="0" name="Smoke"/>
+		<Event step="512" time="4" value="0" property="x" ease="elasticOut" type="tweenShaderProperty" startValue="-1" name="mirrorGame"/>
+		<Event step="512" time="4" value="1" property="zoom" ease="elasticOut" type="tweenShaderProperty" startValue="0.9" name="Mirror"/>
+		<Event step="512" time="4" value="1" property="zoom" ease="elasticOut" type="tweenShaderProperty" startValue="0.8" name="mirrorGame"/>
+		<Event step="512" time="256" value="3.2" property="brt" ease="linear" type="tweenShaderProperty" startValue="0" name="colorswap"/>
+		<Event step="516" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="520" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="520" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="524" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="528" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="532" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="532" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="536" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="539" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="543" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="544" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="548" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="552" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="552" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="556" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="560" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="564" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="564" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="568" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="569" time="8" value="-320" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="700" name="xP"/>
+		<Event step="569" time="8" value="360" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="0" name="angleZ"/>
+		<Event step="569" time="8" value="-700" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="320" name="xO"/>
+		<Event step="571" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="575" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="576" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="580" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="584" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="584" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="588" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="592" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="596" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="596" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="600" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="603" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="607" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="608" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="612" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="616" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="616" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="617" time="4" value="200" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="0" name="zO"/>
+		<Event step="617" time="4" value="-250" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="-700" name="xO"/>
+		<Event step="620" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="624" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="628" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="628" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="632" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="635" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="638" time="8" value="700" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="-320" name="xP"/>
+		<Event step="638" time="8" value="0" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="360" name="angleZ"/>
+		<Event step="638" time="4" value="0" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="200" name="zO"/>
+		<Event step="638" time="8" value="320" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="-250" name="xO"/>
+		<Event step="639" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="640" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="644" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="648" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="648" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="652" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="656" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="660" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="660" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="664" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="667" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="671" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="672" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="676" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="680" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="680" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="684" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="688" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="692" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="692" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="696" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="698" time="8" value="-320" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="700" name="xP"/>
+		<Event step="698" time="8" value="360" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="0" name="angleZ"/>
+		<Event step="698" time="8" value="-700" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="320" name="xO"/>
+		<Event step="699" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="703" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="704" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="708" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="712" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="712" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="716" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="720" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="724" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="724" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="728" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="731" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="735" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="736" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="740" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="744" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="744" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="748" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="752" time="4" value="0.1" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0" name="RaymarchHud"/>
+		<Event step="756" time="3" value="0" property="boxDepth" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="RaymarchHud"/>
+		<Event step="756" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="760" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="766" time="8" value="700" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="-320" name="xP"/>
+		<Event step="766" time="8" value="0" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="360" name="angleZ"/>
+		<Event step="766" time="8" value="320" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="-700" name="xO"/>
+		<Event step="768" time="4" value="0" property="brt" ease="cubeInOut" type="tweenShaderProperty" startValue="3.2" name="colorswap"/>
+		<Event step="768" time="0" value="0" property="hue" ease="cubeInOut" type="tweenShaderProperty" startValue="6.4" name="colorswap"/>
+		<Event step="768" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="0.1" name="BarrelBlur"/>
+		<Event step="768" time="4" value="0" property="waveStrength" ease="cubeInOut" type="tweenShaderProperty" startValue="0.025" name="Smoke"/>
+		<Event step="768" time="8" value="0" property="smokeStrength" ease="cubeInOut" type="tweenShaderProperty" startValue="6.4" name="Smoke"/>
+		<Event step="800" time="1" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="0.1" name="BarrelBlur"/>
+		<Event step="801" time="1" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="BarrelBlur"/>
+		<Event step="802" time="1" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="0.3" name="BarrelBlur"/>
+		<Event step="803" time="1" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="0.4" name="BarrelBlur"/>
+		<Event step="816" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="825" time="8" value="360" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="0" name="angleZ"/>
+		<Event step="825" time="8" value="-320" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="700" name="xP"/>
+		<Event step="825" time="8" value="-700" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="320" name="xO"/>
+		<Event step="832" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="848" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-2" name="BarrelBlur"/>
+		<Event step="864" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-0.5" name="BarrelBlur"/>
+		<Event step="880" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-0.5" name="BarrelBlur"/>
+		<Event step="889" time="8" value="0" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="360" name="angleZ"/>
+		<Event step="889" time="8" value="700" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="-320" name="xP"/>
+		<Event step="889" time="8" value="320" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="-700" name="xO"/>
+		<Event step="896" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="0.5" name="BarrelBlur"/>
+		<Event step="900" time="2" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="0.3" name="BarrelBlur"/>
+		<Event step="902" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-0.3" name="BarrelBlur"/>
+		<Event step="908" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="0.8" name="BarrelBlur"/>
+		<Event step="912" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="0.5" name="BarrelBlur"/>
+		<Event step="916" time="2" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="0.3" name="BarrelBlur"/>
+		<Event step="918" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-0.3" name="BarrelBlur"/>
+		<Event step="924" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="0.8" name="BarrelBlur"/>
+		<Event step="928" time="1" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="0.1" name="BarrelBlur"/>
+		<Event step="929" time="1" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="BarrelBlur"/>
+		<Event step="930" time="1" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="0.3" name="BarrelBlur"/>
+		<Event step="931" time="1" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="0.4" name="BarrelBlur"/>
+		<Event step="934" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="940" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-0.5" name="BarrelBlur"/>
+		<Event step="944" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="948" time="2" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-0.5" name="BarrelBlur"/>
+		<Event step="950" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="0.5" name="BarrelBlur"/>
+		<Event step="954" time="8" value="360" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="0" name="angleZ"/>
+		<Event step="954" time="8" value="-320" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="700" name="xP"/>
+		<Event step="954" time="8" value="-700" property="value" ease="cubeInOut" type="tweenModifierValue" startValue="320" name="xO"/>
+		<Event step="956" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="960" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-0.4" name="BarrelBlur"/>
+		<Event step="968" time="2" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="0.8" name="BarrelBlur"/>
+		<Event step="970" time="2" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="0.8" name="BarrelBlur"/>
+		<Event step="972" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="2" name="BarrelBlur"/>
+		<Event step="976" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="980" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="0.4" name="BarrelBlur"/>
+		<Event step="988" time="1" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-0.1" name="BarrelBlur"/>
+		<Event step="989" time="1" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="0.2" name="BarrelBlur"/>
+		<Event step="990" time="1" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-0.3" name="BarrelBlur"/>
+		<Event step="991" time="1" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-0.5" name="BarrelBlur"/>
+		<Event step="992" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="998" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="0.6" name="BarrelBlur"/>
+		<Event step="1004" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-0.5" name="BarrelBlur"/>
+		<Event step="1008" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="1012" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="BarrelBlur"/>
+		<Event step="1016" time="1" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="0.5" name="BarrelBlur"/>
+		<Event step="1017" time="1" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-1" name="BarrelBlur"/>
+		<Event step="1018" time="1" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="1.5" name="BarrelBlur"/>
+		<Event step="1019" time="1" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-2" name="BarrelBlur"/>
+		<Event step="1020" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="2" name="BarrelBlur"/>
+		<Event step="1024" time="4" value="0" property="barrel" ease="cubeInOut" type="tweenShaderProperty" startValue="-3" name="BarrelBlur"/>
+		<Event step="1024" time="4" value="0" property="zoom" ease="cubeInOut" type="tweenShaderProperty" startValue="1" name="mirrorHud"/>
+	</Events>
+</Modchart>
