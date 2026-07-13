@@ -4,37 +4,37 @@ import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
-import flixel.math.FlxMath;
-import flixel.tweens.FlxTween;
-import flixel.tweens.FlxEase;
 import flixel.FlxCamera;
+import flixel.group.FlxGroup;
+import flixel.group.FlxGroup.FlxTypedGroup;
+import flixel.math.FlxPoint;
+import flixel.math.FlxMath;
 
 import game.Conductor;
 import game.SoundGroup;
-import game.Conductor.BPMChangeEvent;
 import states.PlayState;
 import states.MusicBeatState;
 
 import camera.ModifierRegistry;
 import camera.CameraModifiers;
-import camera.ModchartData;
+import camera.ModchartData.ModifierEntry;
+import camera.ModchartData.TimelineModifierPlacement;
+import camera.ModchartData.CameraEventsSaveData;
 
 import atoms.ColorConstants;
-import atoms.EaseUtils;
 
-import organisms.Background;
 import organisms.AudioController;
 import organisms.SongInfoDisplay;
 import organisms.PreviewCamera;
 import organisms.MenuBar;
 import organisms.ModifierTimeline;
-import organisms.ModifierList;
-import organisms.ModifierEditor;
+import organisms.ModifierBlock;
 
 import templates.EditorLayout;
 
 import substates.MenuDropdownSubState;
 import substates.ModifyModifierPopup;
+import utilities.Options;
 
 typedef MenuData =
 {
@@ -73,25 +73,50 @@ class ModchartEditor extends MusicBeatState
 	public var audio:AudioController;
 	var songInfo:SongInfoDisplay;
 	public var editorPreview:PreviewCamera;
-	public var uiCam:FlxCamera;
-	public var previewCam:FlxCamera;
+
+	// --- CNE 8-camera setup ---
 	public var camGame:FlxCamera;
 	public var camHUD:FlxCamera;
+	public var camOther:FlxCamera;
 	public var camEditor:FlxCamera;
 	public var camEditorTop:FlxCamera;
-	public var camBG:FlxCamera;
+	public var camTimelineList:FlxCamera;
+	public var camTimelineValues:FlxCamera;
+	public var camTimelineEdit:FlxCamera;
+	public var camTimeline:FlxCamera;
+
+	public var uiCam(get, never):FlxCamera;
+	function get_uiCam():FlxCamera return camEditorTop;
 
 	public var modifierTimeline:ModifierTimeline;
-	public var modifierList:ModifierList;
-	public var modifierEditor:ModifierEditor;
 	public var loadedModifiers:Array<ModifierEntry> = [];
 	public var timelinePlacements:Array<TimelineModifierPlacement> = [];
 	public var snapToGrid:Bool = true;
 	public var isPreviewFullscreen:Bool = false;
-	var camTween:FlxTween;
+
+	public var activeModifierType:String = "";
+	public var selectedPlacement:TimelineModifierPlacement = null;
+	public var editionPanelText:FlxText;
+
+	public var editValueInput:flixel.addons.ui.FlxUIInputText;
+	public var editDurationInput:flixel.addons.ui.FlxUIInputText;
+	public var saveEditBtn:flixel.addons.ui.FlxUIButton;
+	public var deleteEditBtn:flixel.addons.ui.FlxUIButton;
+	public var editTypeDropdown:flixel.addons.ui.FlxUIDropDownMenu;
+	public var editEaseDropdown:flixel.addons.ui.FlxUIDropDownMenu;
 
 	var lastScreenWidth:Int = 0;
 	var lastScreenHeight:Int = 0;
+
+	// --- CNE visual elements ---
+	var timelineWindowBg:FlxSprite;
+	var timelineWindowTitle:FlxText;
+	public var timelineHoverBox:FlxSprite;
+	var timelineRowBgs:FlxTypedGroup<FlxSprite>;
+	public var modifierNamesTexts:FlxTypedGroup<FlxText>;
+	public var modifierValuesTexts:FlxTypedGroup<FlxText>;
+	public var durationScrollbar:molecules.Scrollbar;
+	public var verticalScrollbar:molecules.Scrollbar;
 
 	override function create()
 	{
@@ -102,58 +127,239 @@ class ModchartEditor extends MusicBeatState
 		ModifierRegistry.definitions.clear();
 		CameraModifiers.init();
 
-		camBG = new FlxCamera();
-		FlxG.cameras.add(camBG, false);
-
+		// --- CNE 8-camera setup with proper ordering ---
 		camGame = FlxG.camera;
 		camGame.bgColor = FlxColor.TRANSPARENT;
-		previewCam = camGame;
+
+		camHUD = new FlxCamera();
+		camHUD.bgColor = 0;
+
+		camOther = new FlxCamera();
+		camOther.bgColor = 0;
 
 		camEditor = new FlxCamera();
-		camEditor.bgColor = 0;
-		FlxG.cameras.add(camEditor, false);
+		camEditor.bgColor = 0xFF191524;
 
 		camEditorTop = new FlxCamera();
 		camEditorTop.bgColor = 0;
-		FlxG.cameras.add(camEditorTop, false);
 
-		// Reorder FlxG.cameras.list to put camBG at index 0 so it renders first (under the gameplay)
-		FlxG.cameras.list.remove(camBG);
-		FlxG.cameras.list.remove(camGame);
-		FlxG.cameras.list.remove(camEditor);
-		FlxG.cameras.list.remove(camEditorTop);
+		var tY = Std.int(EditorLayout.timelineCamY);
+		var tH = Std.int(EditorLayout.timelineCamH);
 
-		FlxG.cameras.list.push(camBG);
-		FlxG.cameras.list.push(camGame);
-		FlxG.cameras.list.push(camEditor);
-		FlxG.cameras.list.push(camEditorTop);
+		camTimelineList = new FlxCamera(0, tY, EditorLayout.LIST_COL_W, tH);
+		camTimelineList.bgColor = 0;
 
+		camTimelineValues = new FlxCamera(EditorLayout.LIST_COL_W, tY, EditorLayout.VALUES_COL_W, tH);
+		camTimelineValues.bgColor = 0;
+
+		camTimelineEdit = new FlxCamera(0, tY, FlxG.width, tH);
+		camTimelineEdit.bgColor = 0;
+
+		camTimeline = new FlxCamera(EditorLayout.GRID_COL_X, tY, EditorLayout.GRID_COL_W, tH);
+		camTimeline.bgColor = 0;
+
+		// Add cameras bottom→top
+		FlxG.cameras.add(camGame);      // gameplay (default)
+		FlxG.cameras.add(camEditor);    // dark bg for editor area
+		FlxG.cameras.add(camOther);     // transparent overlay
+
+		// Preview camera renders above editor bg
+		editorPreview = new PreviewCamera(this);
+		editorPreview.create(); // adds previewCam to list
+
+		// Timeline cameras render above preview
+		FlxG.cameras.add(camTimelineList);
+		FlxG.cameras.add(camTimelineValues);
+		FlxG.cameras.add(camTimelineEdit);
+		FlxG.cameras.add(camTimeline);
+
+		// camHUD renders above timeline (strums, HUD elements)
+		FlxG.cameras.add(camHUD);
+
+		// camEditorTop renders above everything (top bar, menus, substates)
+		FlxG.cameras.add(camEditorTop);
 		FlxG.camera = camGame;
-		@:privateAccess FlxCamera._defaultCameras = [camGame];
 
-		uiCam = camEditor;
+		// --- CNE Timeline Window (bottom panel) ---
+		timelineWindowBg = new FlxSprite(0, EditorLayout.timelineWindowY);
+		timelineWindowBg.makeGraphic(FlxG.width, EditorLayout.TIMELINE_HEIGHT, 0xFF1A1A2E);
+		timelineWindowBg.scrollFactor.set(0, 1);
+		timelineWindowBg.cameras = [camEditor];
+		add(timelineWindowBg);
 
-		var background = new Background(this);
-		background.bg.cameras = [camBG];
+		timelineWindowTitle = new FlxText(8, EditorLayout.timelineWindowY + 5, 200, "TIMELINE", 16);
+		timelineWindowTitle.setFormat(Paths.font("vcr.ttf"), 16, 0xFFCCCCCC);
+		timelineWindowTitle.scrollFactor.set(0, 1);
+		timelineWindowTitle.cameras = [camEditor];
+		add(timelineWindowTitle);
 
-		// CNE-style: single editor background panel covering bottom half
-		var editorBg = new FlxSprite(0, EditorLayout.editorDefaultY - 30);
-		editorBg.makeGraphic(FlxG.width, Std.int(FlxG.height - EditorLayout.editorDefaultY + 30), ColorConstants.PANEL_DARK);
-		editorBg.scrollFactor.set(0, 0);
-		editorBg.cameras = [camEditor];
-		add(editorBg);
+		// --- CNE Value column background (dark blue-gray) ---
+		var valueBg = new FlxSprite(0, 0);
+		valueBg.makeGraphic(EditorLayout.VALUES_COL_W, Std.int(tH), 0xff302e32);
+		valueBg.scrollFactor.set(0, 0);
+		valueBg.cameras = [camTimelineValues];
+		add(valueBg);
 
-		var barrita = new FlxSprite(0, 0);
-		barrita.makeGraphic(FlxG.width * 2, EditorLayout.TOPBAR_HEIGHT, ColorConstants.TOPBAR);
-		barrita.screenCenter(X);
-		barrita.cameras = [camEditorTop];
-		add(barrita);
+		// --- CNE Edition column background ---
+		var exOffset = EditorLayout.LIST_COL_W + EditorLayout.VALUES_COL_W + (EditorLayout.SEP_W * 2);
 
-		songInfo = new SongInfoDisplay();
-		songInfo.create(this);
-		songPosInfo.cameras = [camEditorTop];
-		songedits.cameras = [camEditorTop];
+		var editionBg = new FlxSprite(exOffset, 0);
+		editionBg.makeGraphic(EditorLayout.EDIT_COL_W, Std.int(tH), 0xff252329);
+		editionBg.scrollFactor.set(0, 0);
+		editionBg.cameras = [camTimelineEdit];
+		add(editionBg);
 
+		// --- CNE Separator lines between columns ---
+		var sep1 = new FlxSprite(0, 0);
+		sep1.makeGraphic(EditorLayout.SEP_W, Std.int(tH), 0xFFCCCCCC);
+		sep1.scrollFactor.set(0, 0);
+		sep1.cameras = [camTimelineList];
+		add(sep1);
+
+		var sep2 = new FlxSprite(0, 0);
+		sep2.makeGraphic(EditorLayout.SEP_W, Std.int(tH), 0xFFCCCCCC);
+		sep2.scrollFactor.set(0, 0);
+		sep2.cameras = [camTimelineValues];
+		add(sep2);
+
+		var sep3 = new FlxSprite(exOffset, 0);
+		sep3.makeGraphic(EditorLayout.SEP_W, Std.int(tH), 0xFFCCCCCC);
+		sep3.scrollFactor.set(0, 0);
+		sep3.cameras = [camTimelineEdit];
+		add(sep3);
+
+		editionPanelText = new FlxText(exOffset + 10, 10, EditorLayout.EDIT_COL_W - 20, "No event selected.\n\nClick an event on the grid to edit it,\nor click a modifier on the left to place it.", 12);
+		editionPanelText.setFormat(Paths.font("vcr.ttf"), 14, 0xFFFFFFFF, "left");
+		editionPanelText.scrollFactor.set(0, 0);
+		editionPanelText.cameras = [camTimelineEdit];
+		add(editionPanelText);
+
+		var ex = exOffset + 10;
+		var ey = 80;
+
+		var durLabel = new FlxText(ex, ey, 60, "Duration:", 12);
+		durLabel.cameras = [camTimelineEdit]; add(durLabel);
+		editDurationInput = new flixel.addons.ui.FlxUIInputText(ex + 65, ey, 50, "4", 12, FlxColor.WHITE, FlxColor.fromRGB(30, 30, 40));
+		editDurationInput.cameras = [camTimelineEdit]; add(editDurationInput);
+
+		var valLabel = new FlxText(ex, ey + 30, 60, "Value:", 12);
+		valLabel.cameras = [camTimelineEdit]; add(valLabel);
+		editValueInput = new flixel.addons.ui.FlxUIInputText(ex + 65, ey + 30, 50, "0", 12, FlxColor.WHITE, FlxColor.fromRGB(30, 30, 40));
+		editValueInput.cameras = [camTimelineEdit]; add(editValueInput);
+
+		var typeLabel = new FlxText(ex, ey + 60, 60, "Type:", 12);
+		typeLabel.cameras = [camTimelineEdit]; add(typeLabel);
+		
+		var easeLabel = new FlxText(ex, ey + 90, 60, "Ease:", 12);
+		easeLabel.cameras = [camTimelineEdit]; add(easeLabel);
+
+		saveEditBtn = new flixel.addons.ui.FlxUIButton(ex, ey + 150, "Save", function() {
+			if (selectedPlacement != null) {
+				var parsedDur = Std.parseInt(editDurationInput.text);
+				selectedPlacement.duration = (parsedDur != null) ? parsedDur : 1;
+				selectedPlacement.value = Std.parseFloat(editValueInput.text);
+				if (Math.isNaN(selectedPlacement.value)) selectedPlacement.value = 0;
+				selectedPlacement.type = editTypeDropdown.selectedId;
+				selectedPlacement.ease = editEaseDropdown.selectedId;
+				if (modifierTimeline != null) modifierTimeline.loadPlacements();
+			}
+		});
+		saveEditBtn.cameras = [camTimelineEdit]; add(saveEditBtn);
+
+		deleteEditBtn = new flixel.addons.ui.FlxUIButton(ex + 90, ey + 150, "Delete", function() {
+			if (selectedPlacement != null) {
+				timelinePlacements.remove(selectedPlacement);
+				selectedPlacement = null;
+				setEditionUIVisible(false);
+				if (modifierTimeline != null) modifierTimeline.loadPlacements();
+			}
+		});
+		deleteEditBtn.cameras = [camTimelineEdit]; add(deleteEditBtn);
+
+		editEaseDropdown = new flixel.addons.ui.FlxUIDropDownMenu(ex + 65, ey + 90, flixel.addons.ui.FlxUIDropDownMenu.makeStrIdLabelArray(["linear", "sineIn", "sineOut", "sineInOut", "quadIn", "quadOut", "quadInOut", "cubeIn", "cubeOut", "cubeInOut"]), function(id:String) {});
+		editEaseDropdown.cameras = [camTimelineEdit]; add(editEaseDropdown);
+
+		editTypeDropdown = new flixel.addons.ui.FlxUIDropDownMenu(ex + 65, ey + 60, flixel.addons.ui.FlxUIDropDownMenu.makeStrIdLabelArray(["tween", "set"]), function(id:String) {});
+		editTypeDropdown.cameras = [camTimelineEdit]; add(editTypeDropdown);
+
+		setEditionUIVisible(false);
+
+		// --- CNE Alternating row backgrounds ---
+		timelineRowBgs = new FlxTypedGroup<FlxSprite>();
+		add(timelineRowBgs);
+
+		modifierNamesTexts = new FlxTypedGroup<FlxText>();
+		add(modifierNamesTexts);
+
+		modifierValuesTexts = new FlxTypedGroup<FlxText>();
+		add(modifierValuesTexts);
+
+		// --- CNE Hover box ---
+		timelineHoverBox = new FlxSprite(-100, 0);
+		timelineHoverBox.makeGraphic(Std.int(EditorLayout.ROW_SIZE_X), Std.int(EditorLayout.ROW_SIZE_Y), 0x44FFFF00);
+		timelineHoverBox.scrollFactor.set(1, 1);
+		timelineHoverBox.cameras = [camTimeline];
+		timelineHoverBox.visible = false;
+		add(timelineHoverBox);
+
+		// --- Scrollbars ---
+		var tY = Std.int(EditorLayout.timelineCamY);
+		var tH = Std.int(EditorLayout.timelineCamH);
+		var maxScrollY = Math.max(0, (loadedModifiers.length * EditorLayout.ROW_SIZE_Y) - tH);
+
+		// Horizontal scrollbar (Duration)
+		durationScrollbar = new molecules.Scrollbar(
+			this,
+			EditorLayout.GRID_COL_X,
+			EditorLayout.timelineWindowY + 8,
+			Std.int(EditorLayout.GRID_COL_W),
+			15,
+			0,
+			100,
+			true,
+			camEditor
+		);
+		durationScrollbar.track.scrollFactor.set(0, 1);
+		durationScrollbar.thumb.scrollFactor.set(0, 1);
+		durationScrollbar.onValueChange = function(val)
+		{
+			if (FlxG.sound.music != null)
+			{
+				FlxG.sound.music.time = val;
+				if (vocals != null) vocals.time = val;
+				Conductor.songPosition = val;
+				recalculateSteps();
+			}
+		};
+
+		// Vertical scrollbar (Gap / Modifier List scroll)
+		verticalScrollbar = new molecules.Scrollbar(
+			this,
+			FlxG.width - 15,
+			tY,
+			15,
+			Std.int(tH - 18),
+			0,
+			maxScrollY,
+			false,
+			camEditor
+		);
+		verticalScrollbar.track.scrollFactor.set(0, 1);
+		verticalScrollbar.thumb.scrollFactor.set(0, 1);
+		verticalScrollbar.onValueChange = function(val)
+		{
+			camTimeline.scroll.y = val;
+			camTimelineList.scroll.y = val;
+			camTimelineValues.scroll.y = val;
+		};
+
+		// --- Top bar background (renders UNDER menu) ---
+		var topBar = new FlxSprite(0, 0);
+		topBar.makeGraphic(FlxG.width, EditorLayout.TOPBAR_HEIGHT, ColorConstants.TOPBAR);
+		topBar.cameras = [camEditorTop];
+		add(topBar);
+
+		// --- Top menu bar ---
 		menus = [
 			{name:"File", items:["Save","Save As","Exit"]},
 			{name:"Edit", items:["Copy","Paste","Cut","Delete","Shift Selection Left","Shift Selection Right"]},
@@ -167,40 +373,64 @@ class ModchartEditor extends MusicBeatState
 		menuBar = new MenuBar(camEditorTop);
 		menuBar.create(this);
 
+		// --- Song info (right-aligned at top-right) ---
+		songInfo = new SongInfoDisplay();
+		songInfo.create(this);
+		songPosInfo.cameras = [camEditorTop];
+		songedits.cameras = [camEditorTop];
+
 		audio = new AudioController(this);
 		audio.create(this);
 
 		Conductor.changeBPM(PlayState.SONG.bpm);
 		Conductor.songPosition = 0;
 
-		editorPreview = new PreviewCamera(this);
-		editorPreview.create(this);
-		camHUD = editorPreview.camHUD;
-
-		var editorY = EditorLayout.editorDefaultY;
-
-		modifierList = new ModifierList(this, camEditor);
-		modifierList.setY(editorY);
-		modifierList.onModifierSelected = function(index:Int) {
-			if (index >= 0 && index < loadedModifiers.length)
-				modifierEditor.loadEntry(loadedModifiers[index]);
-			else
-				modifierEditor.clearEditor();
-		};
-		add(modifierList);
-
-		modifierEditor = new ModifierEditor(this, camEditor);
-		add(modifierEditor);
-
-		var rightPanelX = EditorLayout.rightPanelX;
-		var rightW = EditorLayout.rightPanelDefaultW;
-		var rightH = EditorLayout.rightPanelDefaultH;
-		modifierTimeline = new ModifierTimeline(this, camEditor, rightPanelX, editorY, rightW, rightH);
+		// --- Timeline component ---
+		modifierTimeline = new ModifierTimeline(this);
 		add(modifierTimeline);
 
 		loadCameraEvents();
 		modifierTimeline.loadPlacements();
-		modifierList.rebuildList();
+		buildTimelineRows();
+	}
+
+	public function buildTimelineRows():Void
+	{
+		timelineRowBgs.clear();
+		if (modifierNamesTexts != null) modifierNamesTexts.clear();
+		if (modifierValuesTexts != null) modifierValuesTexts.clear();
+
+		var rowCount = Std.int(Math.max(loadedModifiers.length, 10));
+		for (i in 0...rowCount)
+		{
+			var bg = new FlxSprite(0, i * Std.int(EditorLayout.ROW_SIZE_Y));
+			bg.makeGraphic(Std.int(FlxG.width), Std.int(EditorLayout.ROW_SIZE_Y), FlxColor.TRANSPARENT, true);
+			var pixels = bg.pixels;
+			var fillRect = new openfl.geom.Rectangle(0, 0, bg.width, bg.height);
+			var color = (i % 2 == 0) ? 0xFF545454 : 0xFF272727;
+			pixels.fillRect(fillRect, color);
+			bg.dirty = true;
+			bg.scrollFactor.set(0, 1);
+			bg.cameras = [camTimeline, camTimelineList, camTimelineValues];
+			timelineRowBgs.add(bg);
+
+			if (i < loadedModifiers.length && modifierNamesTexts != null && modifierValuesTexts != null)
+			{
+				var mod = loadedModifiers[i];
+
+				var nameText = new FlxText(8, i * EditorLayout.ROW_SIZE_Y + 2, EditorLayout.LIST_COL_W - 16, mod.name, 12);
+				nameText.setFormat(Paths.font("vcr.ttf"), 12, FlxColor.WHITE);
+				nameText.scrollFactor.set(0, 1);
+				nameText.cameras = [camTimelineList];
+				modifierNamesTexts.add(nameText);
+
+				var valText = new FlxText(4, i * EditorLayout.ROW_SIZE_Y + 2, EditorLayout.VALUES_COL_W - 8, Std.string(mod.value), 12);
+				valText.setFormat(Paths.font("vcr.ttf"), 12, FlxColor.WHITE, "center");
+				valText.scrollFactor.set(0, 1);
+				valText.cameras = [camTimelineValues];
+				modifierValuesTexts.add(valText);
+			}
+		}
 	}
 
 	public function handleMenuAction(menuName:String, itemIndex:Int):Void
@@ -216,23 +446,19 @@ class ModchartEditor extends MusicBeatState
 						if (FlxG.sound.music != null) FlxG.sound.music.stop();
 						FlxG.switchState(() -> new PlayState());
 				}
-
 			case "Modchart":
 				switch (itemIndex)
 				{
 					case 0: openModifierEditor();
 				}
-
 			case "View":
 				switch (itemIndex)
 				{
 					case 0: toggleFullscreenPreview();
-					case 1: trace("Swap Scroll Mode");
+					case 1: toggleSwapScroll();
 				}
-
 			case "Snap >":
 				beatSnap = Std.parseInt(menus[activeMenuIndex].items[itemIndex]);
-
 			case "Playback":
 				switch (itemIndex)
 				{
@@ -250,7 +476,6 @@ class ModchartEditor extends MusicBeatState
 						if (playbackSpeed < 0.5) playbackSpeed = 0.5;
 						applyPlaybackSpeed();
 				}
-
 			case "Song":
 				switch (itemIndex)
 				{
@@ -292,14 +517,11 @@ class ModchartEditor extends MusicBeatState
 	{
 		FlxG.sound.music.time = 0;
 		vocals.time = 0;
-
 		FlxG.sound.music.play(false);
 		vocals.play(false);
-
 		Conductor.songPosition = 0;
 		curStep = 0;
 		curBeat = 0;
-
 		songStarted = true;
 	}
 
@@ -319,7 +541,6 @@ class ModchartEditor extends MusicBeatState
 	function resumeSong():Void
 	{
 		if (!songStarted) { startSong(); return; }
-
 		if (FlxG.sound.music != null)
 		{
 			FlxG.sound.music.resume();
@@ -356,28 +577,65 @@ class ModchartEditor extends MusicBeatState
 	{
 		super.update(elapsed);
 
-		// CNE-style: Lerp editor UI scrolls to slide off-screen when fullscreen
-		var targetScrollY = isPreviewFullscreen ? -360.0 : 0.0;
-		camEditor.scroll.y += (targetScrollY - camEditor.scroll.y) * 0.15;
-		if (Math.abs(targetScrollY - camEditor.scroll.y) < 0.1) camEditor.scroll.y = targetScrollY;
+		// Fullscreen: timeline slides down, top bar stays
+		if (isPreviewFullscreen)
+		{
+			camEditor.scroll.y += (-360 - camEditor.scroll.y) * 0.15;
+			if (Math.abs(-360 - camEditor.scroll.y) < 0.1) camEditor.scroll.y = -360;
+		}
+		else
+		{
+			camEditor.scroll.y += (0 - camEditor.scroll.y) * 0.15;
+			if (Math.abs(0 - camEditor.scroll.y) < 0.1) camEditor.scroll.y = 0;
+		}
+		camEditorTop.scroll.y = 0; // top bar always visible
 
-		var targetTopScrollY = isPreviewFullscreen ? 100.0 : 0.0;
-		camEditorTop.scroll.y += (targetTopScrollY - camEditorTop.scroll.y) * 0.15;
-		if (Math.abs(targetTopScrollY - camEditorTop.scroll.y) < 0.1) camEditorTop.scroll.y = targetTopScrollY;
+		// Timeline cameras follow editor scroll to hide/reveal
+		var timelineY = EditorLayout.timelineCamY - camEditor.scroll.y;
+		camTimelineList.y = timelineY;
+		camTimelineValues.y = timelineY;
+		if (camTimelineEdit != null) camTimelineEdit.y = timelineY;
+		camTimeline.y = timelineY;
 
 		if (subState == null) menuBar.updateHover(this);
 
 		if (FlxG.keys.justPressed.SPACE)
 		{
-			if (FlxG.sound.music.playing) pauseSong(); else resumeSong();
+			var isTyping = (editValueInput != null && editValueInput.hasFocus) || (editDurationInput != null && editDurationInput.hasFocus);
+			if (!isTyping) {
+				if (FlxG.sound.music.playing) pauseSong(); else resumeSong();
+			}
+		}
+
+		// Keyboard Timeline Navigation (Left/Right)
+		var isTyping = (editValueInput != null && editValueInput.hasFocus) || (editDurationInput != null && editDurationInput.hasFocus);
+		if (!isTyping)
+		{
+			if (FlxG.keys.justPressed.LEFT || FlxG.keys.justPressed.RIGHT)
+			{
+				var bpm = (Conductor.bpm > 0) ? Conductor.bpm : 120;
+				var crochet = (60 / bpm) * 1000;
+				var steps = FlxG.keys.pressed.SHIFT ? 16 : 1;
+				var mult = FlxG.keys.justPressed.LEFT ? -1 : 1;
+				var targetTime = Conductor.songPosition + (crochet * steps * mult);
+				var songLen = (FlxG.sound.music != null) ? FlxG.sound.music.length : 60000;
+				if (targetTime < 0) targetTime = 0;
+				if (targetTime > songLen) targetTime = songLen;
+				Conductor.songPosition = targetTime;
+				if (FlxG.sound.music != null)
+				{
+					if (FlxG.sound.music.playing) pauseSong();
+					FlxG.sound.music.time = targetTime;
+					if (vocals != null) vocals.time = targetTime;
+				}
+				recalculateSteps();
+			}
 		}
 
 		curStep = recalculateSteps();
 
 		if (FlxG.sound.music != null && FlxG.sound.music.playing)
-		{
 			Conductor.songPosition = FlxG.sound.music.time;
-		}
 
 		if (songStarted && FlxG.sound.music != null && FlxG.sound.music.playing)
 		{
@@ -390,27 +648,12 @@ class ModchartEditor extends MusicBeatState
 			if (nextSection != curSection) changeSection(nextSection, false);
 		}
 
-		if (controls.RIGHT_P || controls.LEFT_P)
-		{
-			var totalSteps = (FlxG.sound.music != null && Conductor.stepCrochet > 0) ? (FlxG.sound.music.length / Conductor.stepCrochet) : 1000.0;
-			var visibleSteps = modifierTimeline.gridW / modifierTimeline.zoomX;
-			var maxScroll = Math.max(0, totalSteps - visibleSteps);
-			var shiftThing:Int = FlxG.keys.pressed.SHIFT ? 4 : 1;
-			var stepMove = shiftThing * 16;
-			if (controls.RIGHT_P) modifierTimeline.scrollX += stepMove;
-			if (controls.LEFT_P) modifierTimeline.scrollX -= stepMove;
-			modifierTimeline.scrollX = FlxMath.bound(modifierTimeline.scrollX, 0, maxScroll);
-			modifierTimeline.timelineScroll.setValue(modifierTimeline.scrollX);
-			modifierTimeline.drawGrid();
-		}
-
 		if (songStarted && FlxG.sound.music != null)
 		{
 			if (FlxG.sound.music.time >= FlxG.sound.music.length - 5)
 			{
 				resetSong();
 				if (modifierTimeline != null) modifierTimeline.scrollX = 0;
-				if (modifierList != null) modifierList.rebuildList();
 				if (editorPreview != null)
 				{
 					editorPreview.resetModifiers();
@@ -426,11 +669,7 @@ class ModchartEditor extends MusicBeatState
 		{
 			lastScreenWidth = FlxG.width;
 			lastScreenHeight = FlxG.height;
-
-			if (modifierTimeline != null)
-			{
-				modifierTimeline.resize(EditorLayout.rightPanelX, EditorLayout.editorDefaultY, EditorLayout.rightPanelDefaultW, EditorLayout.rightPanelDefaultH);
-			}
+			onResize(FlxG.width, FlxG.height);
 		}
 
 		if (FlxG.keys.justPressed.ESCAPE)
@@ -443,27 +682,270 @@ class ModchartEditor extends MusicBeatState
 			}
 		}
 
+		// --- Timeline Mouse Interaction (Zoom, Scroll, Seek, Hover Box) ---
+		var mouseX = FlxG.mouse.x;
+		var mouseY = FlxG.mouse.y;
+		var timelineWindowY = EditorLayout.timelineWindowY;
+
+		if (mouseY >= timelineWindowY && mouseY < FlxG.height && subState == null)
+		{
+			// 1. Mouse wheel zoom & vertical scroll
+			if (FlxG.mouse.wheel != 0)
+			{
+				if (FlxG.keys.pressed.CONTROL)
+				{
+					// Zoom horizontally
+					modifierTimeline.zoomX += FlxG.mouse.wheel * 2.0;
+					if (modifierTimeline.zoomX < 5.0) modifierTimeline.zoomX = 5.0;
+					if (modifierTimeline.zoomX > 50.0) modifierTimeline.zoomX = 50.0;
+				}
+				else
+				{
+					// Scroll vertically
+					var targetScrollY = camTimeline.scroll.y + (-FlxG.mouse.wheel * EditorLayout.ROW_SIZE_Y);
+					var maxScrollY = Math.max(0, (loadedModifiers.length * EditorLayout.ROW_SIZE_Y) - EditorLayout.timelineCamH);
+					if (targetScrollY < 0) targetScrollY = 0;
+					if (targetScrollY > maxScrollY) targetScrollY = maxScrollY;
+
+					camTimeline.scroll.y = targetScrollY;
+					camTimelineList.scroll.y = targetScrollY;
+					camTimelineValues.scroll.y = targetScrollY;
+				}
+			}
+
+			// 2. Click interactions
+			var isDraggingScrollbar = (durationScrollbar != null && durationScrollbar.isDragging) || (verticalScrollbar != null && verticalScrollbar.isDragging);
+			
+			if (FlxG.mouse.justPressed && !isDraggingScrollbar)
+			{
+				var listTotalW = EditorLayout.LIST_COL_W + EditorLayout.VALUES_COL_W;
+				
+				// A. Clicking the Modifier List (Left Column)
+				if (mouseX >= 0 && mouseX < listTotalW && mouseY > timelineWindowY + EditorLayout.TOPBAR_HEIGHT)
+				{
+					var listMouseY = mouseY - (timelineWindowY + EditorLayout.TOPBAR_HEIGHT) + camTimelineList.scroll.y;
+					var rowIndex = Math.floor(listMouseY / EditorLayout.ROW_SIZE_Y);
+					if (rowIndex >= 0 && rowIndex < loadedModifiers.length)
+					{
+						activeModifierType = loadedModifiers[rowIndex].modifier;
+					}
+				}
+				
+				// B. Clicking the Grid Area (Right Column)
+				if (mouseX >= EditorLayout.GRID_COL_X && mouseX < FlxG.width * 0.8)
+				{
+					// B1. Clicking the Ruler (Top Bar) -> Seek Song
+					if (mouseY <= timelineWindowY + EditorLayout.TOPBAR_HEIGHT)
+					{
+						var bpm = (Conductor.bpm > 0) ? Conductor.bpm : 120;
+						var crochet = (60 / bpm) * 1000;
+						var clickBeat = (mouseX - EditorLayout.GRID_COL_X + modifierTimeline.scrollX) / modifierTimeline.zoomX;
+						var targetTime = clickBeat * crochet;
+						var songLen = (FlxG.sound.music != null) ? FlxG.sound.music.length : 60000;
+						if (targetTime < 0) targetTime = 0;
+						if (targetTime > songLen) targetTime = songLen;
+
+						if (FlxG.sound.music != null) FlxG.sound.music.time = targetTime;
+						if (vocals != null) vocals.time = targetTime;
+						Conductor.songPosition = targetTime;
+						recalculateSteps();
+					}
+					// B2. Clicking the Grid (Timeline) -> Select or Place Block
+					else
+					{
+						var gridMouseX = mouseX - EditorLayout.GRID_COL_X + modifierTimeline.scrollX;
+						var gridMouseY = mouseY - (timelineWindowY + EditorLayout.TOPBAR_HEIGHT) + camTimeline.scroll.y;
+
+						var clickedBlock:organisms.ModifierBlock = null;
+						if (modifierTimeline != null)
+						{
+							modifierTimeline.modifierBlocks.forEachAlive(function(block:organisms.ModifierBlock) {
+								if (gridMouseX >= block.x && gridMouseX <= block.x + block.bg.width &&
+									gridMouseY >= block.y && gridMouseY <= block.y + block.bg.height) {
+									clickedBlock = block;
+								}
+							});
+						}
+
+						if (clickedBlock != null)
+						{
+							if (selectedPlacement != clickedBlock.data) {
+								selectedPlacement = clickedBlock.data;
+								updateEditionUI();
+							}
+						}
+						else
+						{
+							var rowIndex = Math.floor(gridMouseY / EditorLayout.ROW_SIZE_Y);
+							if (rowIndex >= 0 && rowIndex < loadedModifiers.length)
+							{
+								activeModifierType = loadedModifiers[rowIndex].modifier;
+								var hoverBeat = Math.floor(gridMouseX / modifierTimeline.zoomX);
+								var newPlacement:camera.ModchartData.TimelineModifierPlacement = {
+									beat: hoverBeat,
+									duration: 4,
+									type: "tween",
+									modifierRef: activeModifierType,
+									ease: "linear",
+									value: 0
+								};
+								timelinePlacements.push(newPlacement);
+								selectedPlacement = newPlacement;
+								updateEditionUI();
+								modifierTimeline.loadPlacements();
+							}
+						}
+					}
+				}
+			}
+
+			// C. Hover box positioning & Song seek drag
+			if (mouseX >= EditorLayout.GRID_COL_X && mouseX < FlxG.width)
+			{
+				if (FlxG.mouse.pressed && !isDraggingScrollbar && mouseY <= timelineWindowY + EditorLayout.TOPBAR_HEIGHT)
+				{
+					// Dragging on the ruler to seek continuously
+					var bpm = (Conductor.bpm > 0) ? Conductor.bpm : 120;
+					var crochet = (60 / bpm) * 1000;
+					var clickBeat = (mouseX - EditorLayout.GRID_COL_X + modifierTimeline.scrollX) / modifierTimeline.zoomX;
+					var targetTime = clickBeat * crochet;
+					var songLen = (FlxG.sound.music != null) ? FlxG.sound.music.length : 60000;
+					if (targetTime < 0) targetTime = 0;
+					if (targetTime > songLen) targetTime = songLen;
+
+					if (FlxG.sound.music != null) FlxG.sound.music.time = targetTime;
+					if (vocals != null) vocals.time = targetTime;
+					Conductor.songPosition = targetTime;
+					recalculateSteps();
+				}
+
+				if (timelineHoverBox != null && modifierTimeline != null && mouseY > timelineWindowY + EditorLayout.TOPBAR_HEIGHT)
+				{
+					timelineHoverBox.visible = true;
+					var gridMouseX = mouseX - EditorLayout.GRID_COL_X + modifierTimeline.scrollX;
+					var gridMouseY = mouseY - (timelineWindowY + EditorLayout.TOPBAR_HEIGHT) + camTimeline.scroll.y;
+
+					var hoverBeat = Math.floor(gridMouseX / modifierTimeline.zoomX);
+					var hoverRow = Math.floor(gridMouseY / EditorLayout.ROW_SIZE_Y);
+
+					timelineHoverBox.x = hoverBeat * modifierTimeline.zoomX - modifierTimeline.scrollX;
+					timelineHoverBox.y = hoverRow * EditorLayout.ROW_SIZE_Y;
+					
+					timelineHoverBox.setGraphicSize(Std.int(modifierTimeline.zoomX), Std.int(EditorLayout.ROW_SIZE_Y));
+					timelineHoverBox.updateHitbox();
+				}
+				else
+				{
+					if (timelineHoverBox != null) timelineHoverBox.visible = false;
+				}
+			}
+			else
+			{
+				if (timelineHoverBox != null) timelineHoverBox.visible = false;
+			}
+		}
+		else
+		{
+			if (timelineHoverBox != null) timelineHoverBox.visible = false;
+		}
+
+		if (modifierNamesTexts != null)
+		{
+			for (i in 0...loadedModifiers.length)
+			{
+				if (i < modifierNamesTexts.length)
+				{
+					var t = modifierNamesTexts.members[i];
+					if (t != null)
+					{
+						if (activeModifierType == loadedModifiers[i].modifier)
+							t.color = 0xFFFFFF00;
+						else
+							t.color = 0xFFFFFFFF;
+					}
+				}
+			}
+		}
+
 		evaluateAllCameraData(curDecStep);
 		if (editorPreview != null) editorPreview.update(elapsed);
+		if (modifierTimeline != null) modifierTimeline.update(elapsed);
+
+		// --- Update and Sync Scrollbars ---
+		if (durationScrollbar != null)
+		{
+			var songLen = (FlxG.sound.music != null) ? FlxG.sound.music.length : 60000;
+			durationScrollbar.setRange(0, songLen);
+			if (!durationScrollbar.isDragging)
+			{
+				durationScrollbar.setValue(Conductor.songPosition);
+			}
+			durationScrollbar.update();
+		}
+
+		if (verticalScrollbar != null)
+		{
+			var maxScrollY = Math.max(0, (loadedModifiers.length * EditorLayout.ROW_SIZE_Y) - EditorLayout.timelineCamH);
+			verticalScrollbar.setRange(0, maxScrollY);
+			if (!verticalScrollbar.isDragging)
+			{
+				verticalScrollbar.setValue(camTimeline.scroll.y);
+			}
+			verticalScrollbar.update();
+		}
+	}
+
+	function updateEditionUI() {
+		if (selectedPlacement != null) {
+			editionPanelText.text = "EDIT EVENT: " + selectedPlacement.modifierRef + "\n@ Beat " + selectedPlacement.beat;
+			editDurationInput.text = Std.string(selectedPlacement.duration);
+			editValueInput.text = Std.string(selectedPlacement.value);
+			editTypeDropdown.selectedLabel = selectedPlacement.type;
+			editEaseDropdown.selectedLabel = (selectedPlacement.ease != null) ? selectedPlacement.ease : "linear";
+			setEditionUIVisible(true);
+		} else {
+			editionPanelText.text = "No event selected.\n\nClick a modifier on the left\nto select it, then click\nthe grid to place it.";
+			setEditionUIVisible(false);
+		}
+	}
+
+	function setEditionUIVisible(v:Bool) {
+		if (editDurationInput != null) editDurationInput.visible = v;
+		if (editValueInput != null) editValueInput.visible = v;
+		if (editTypeDropdown != null) editTypeDropdown.visible = v;
+		if (editEaseDropdown != null) editEaseDropdown.visible = v;
+		if (saveEditBtn != null) saveEditBtn.visible = v;
+		if (deleteEditBtn != null) deleteEditBtn.visible = v;
+	}
+
+	override function beatHit():Void
+	{
+		super.beatHit();
+		if (editorPreview != null)
+			editorPreview.beatHit();
+	}
+
+	override function onResize(Width:Int, Height:Int):Void
+	{
+		super.onResize(Width, Height);
+		timelineWindowBg.setGraphicSize(FlxG.width, EditorLayout.TIMELINE_HEIGHT);
+		timelineWindowBg.updateHitbox();
 	}
 
 	function recalculateSteps():Int
 	{
-		var lastChange:BPMChangeEvent = { stepTime: 0, songTime: 0, bpm: 0 };
-
+		var lastChange = { stepTime: 0, songTime: 0.0, bpm: 0.0 };
 		var sourceTime = Conductor.songPosition;
 		if (FlxG.sound.music != null && FlxG.sound.music.playing)
 		{
 			sourceTime = FlxG.sound.music.time;
 			Conductor.songPosition = sourceTime;
 		}
-
 		for (i in 0...Conductor.bpmChangeMap.length)
 		{
 			if (sourceTime > Conductor.bpmChangeMap[i].songTime)
 				lastChange = Conductor.bpmChangeMap[i];
 		}
-
 		curStep = lastChange.stepTime + Math.floor((sourceTime - lastChange.songTime) / Conductor.stepCrochet);
 		updateBeat();
 		return curStep;
@@ -472,17 +954,14 @@ class ModchartEditor extends MusicBeatState
 	function sectionStartTime(?section:Int):Float
 	{
 		if (section == null) section = curSection;
-
 		var time:Float = 0;
 		var bpm:Float = PlayState.SONG.bpm;
-
 		for (i in 0...section)
 		{
 			var sec = PlayState.SONG.notes[i];
 			if (sec.changeBPM) bpm = sec.bpm;
 			time += Conductor.timeScale[0] * (60 / bpm) * 1000;
 		}
-
 		return time;
 	}
 
@@ -501,43 +980,46 @@ class ModchartEditor extends MusicBeatState
 		}
 	}
 
+	public function evaluateAllCameraData(step:Float):Void
+	{
+		if (editorPreview != null) editorPreview.resetModifiers();
+		for (defId in ModifierRegistry.definitions.keys())
+		{
+			var def = ModifierRegistry.definitions.get(defId);
+			ModifierRegistry.applyModifier(defId, def.defaultValue, this);
+		}
+		for (defId in ModifierRegistry.definitions.keys())
+		{
+			var val = getModifierValue(defId, step);
+			ModifierRegistry.applyModifier(defId, val, this);
+		}
+	}
+
 	public function getModifierValue(modifierId:String, step:Float):Float
 	{
 		var defVal = ModifierRegistry.getDefaultValue(modifierId);
 		var result = defVal;
-
 		for (entry in loadedModifiers)
 		{
 			if (entry.modifier != modifierId) continue;
-
 			if (entry.type == "set")
-			{
 				result = entry.value;
-			}
 			else if (entry.type == "tween")
 			{
 				var dur:Float = (entry.duration != null && entry.duration > 0) ? entry.duration : 1;
-				if (step >= dur)
-				{
-					result = entry.value;
-				}
-				else
-				{
+				if (step >= dur) result = entry.value;
+				else {
 					var t = step / dur;
-					if (entry.ease != null && entry.ease != "linear")
-						t = EaseUtils.fromName(entry.ease)(t);
+					if (entry.ease != null && entry.ease != "linear") t = atoms.EaseUtils.fromName(entry.ease)(t);
 					result = FlxMath.lerp(defVal, entry.value, t);
 				}
 			}
 		}
-
 		for (pl in timelinePlacements)
 		{
 			if (pl.modifierRef != modifierId) continue;
-
 			var placementStep = pl.beat * 4;
 			var dur:Float = (pl.duration != null && pl.duration > 0) ? pl.duration : 1;
-
 			if (pl.type == "set")
 			{
 				if (step >= placementStep) result = pl.value;
@@ -547,34 +1029,13 @@ class ModchartEditor extends MusicBeatState
 				if (step >= placementStep && step < placementStep + dur)
 				{
 					var t = (step - placementStep) / dur;
-					if (pl.ease != null && pl.ease != "linear") t = EaseUtils.fromName(pl.ease)(t);
+					if (pl.ease != null && pl.ease != "linear") t = atoms.EaseUtils.fromName(pl.ease)(t);
 					result = FlxMath.lerp(defVal, pl.value, t);
 				}
-				else if (step >= placementStep + dur)
-				{
-					result = pl.value;
-				}
+				else if (step >= placementStep + dur) result = pl.value;
 			}
 		}
-
 		return result;
-	}
-
-	public function evaluateAllCameraData(step:Float):Void
-	{
-		if (editorPreview != null) editorPreview.resetModifiers();
-
-		for (defId in ModifierRegistry.definitions.keys())
-		{
-			var def = ModifierRegistry.definitions.get(defId);
-			ModifierRegistry.applyModifier(defId, def.defaultValue, this);
-		}
-
-		for (defId in ModifierRegistry.definitions.keys())
-		{
-			var val = getModifierValue(defId, step);
-			ModifierRegistry.applyModifier(defId, val, this);
-		}
 	}
 
 	public function openModifierEditor():Void
@@ -605,7 +1066,6 @@ class ModchartEditor extends MusicBeatState
 	{
 		loadedModifiers = [];
 		timelinePlacements = [];
-
 		#if sys
 		var path = getCameraEventsPath();
 		if (sys.FileSystem.exists(path))
@@ -617,30 +1077,20 @@ class ModchartEditor extends MusicBeatState
 				if (data.modifiers != null) loadedModifiers = data.modifiers;
 				if (data.placements != null) timelinePlacements = data.placements;
 			}
-			catch (e:Dynamic)
-			{
-				trace("Error loading cameraevents.json: " + e);
-			}
+			catch (e:Dynamic) { trace("Error loading cameraevents.json: " + e); }
 		}
 		#end
 	}
 
 	public function saveCameraEvents(forceDialog:Bool = false):Void
 	{
-		var data:CameraEventsSaveData = {
-			modifiers: loadedModifiers,
-			placements: timelinePlacements
-		};
-
+		var data:CameraEventsSaveData = { modifiers: loadedModifiers, placements: timelinePlacements };
 		var jsonStr = haxe.Json.stringify(data, "\t");
-
 		if (forceDialog)
 		{
-			var fileRef = new openfl.net.FileReference();
-			fileRef.save(jsonStr, "cameraevents.json");
+			new openfl.net.FileReference().save(jsonStr, "cameraevents.json");
 			return;
 		}
-
 		#if sys
 		try
 		{
@@ -648,23 +1098,26 @@ class ModchartEditor extends MusicBeatState
 			var dir = haxe.io.Path.directory(path);
 			if (!sys.FileSystem.exists(dir)) sys.FileSystem.createDirectory(dir);
 			sys.io.File.saveContent(path, jsonStr);
-			trace("Saved camera events to " + path);
 		}
 		catch (e:Dynamic)
 		{
-			trace("Error saving camera events directly: " + e);
-			var fileRef = new openfl.net.FileReference();
-			fileRef.save(jsonStr, "cameraevents.json");
+			new openfl.net.FileReference().save(jsonStr, "cameraevents.json");
 		}
 		#else
-		var fileRef = new openfl.net.FileReference();
-		fileRef.save(jsonStr, "cameraevents.json");
+		new openfl.net.FileReference().save(jsonStr, "cameraevents.json");
 		#end
 	}
 
 	public function toggleFullscreenPreview():Void
 	{
 		isPreviewFullscreen = !isPreviewFullscreen;
+	}
+
+	public function toggleSwapScroll():Void
+	{
+		var cur = Options.getData("downscroll") == true;
+		Options.setData(!cur, "downscroll");
+		if (editorPreview != null) editorPreview.repositionStrums();
 	}
 
 	override function destroy()

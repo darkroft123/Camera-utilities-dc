@@ -5,40 +5,40 @@ import flixel.FlxG;
 class EditorLayout
 {
 	public static inline var TOPBAR_HEIGHT:Int = 30;
-	public static inline var MENU_Y:Float = 80;
-	public static inline var MAX_VISIBLE_ACTIONS:Int = 8;
+	public static inline var TIMELINE_HEIGHT:Int = 320;
+	public static inline var ROW_SIZE_X:Float = 20.0;
+	public static inline var ROW_SIZE_Y:Float = 20.0;
+	public static inline var LIST_COL_W:Int = 200;
+	public static inline var VALUES_COL_W:Int = 56;
+	public static inline var EDIT_COL_W:Int = 256;
+	public static inline var SEP_W:Int = 2;
+	public static var GRID_COL_X(get, never):Float;
+	static function get_GRID_COL_X():Float return LIST_COL_W + VALUES_COL_W + EDIT_COL_W + (SEP_W * 3);
+	public static var GRID_COL_W(get, never):Int;
+	static function get_GRID_COL_W():Int return Std.int(FlxG.width - GRID_COL_X);
 
-	public static var previewScale(get, never):Float;
-	static function get_previewScale():Float return 0.5;
+	public static var timelineWindowY(get, never):Float;
+	static function get_timelineWindowY():Float return FlxG.height - TIMELINE_HEIGHT;
 
-	public static var editorDefaultY(get, never):Float;
-	static function get_editorDefaultY():Float return FlxG.height * 0.5 + 30;
+	public static var timelineCamY(get, never):Float;
+	static function get_timelineCamY():Float return timelineWindowY + TOPBAR_HEIGHT;
 
-	public static var leftPanelW:Int = 175;
-	public static var leftPanelX:Int = 5;
+	public static var timelineCamH(get, never):Float;
+	static function get_timelineCamH():Float return FlxG.height - timelineCamY;
 
-	public static var midPanelX:Int = 185;
-	public static var midPanelW:Int = 175;
+	public static inline var editorCamScale:Float = 0.5;
 
-	public static var rightPanelX(get, never):Float;
-	static function get_rightPanelX():Float return midPanelX + midPanelW + 3;
-	public static var rightPanelDefaultW(get, never):Int;
-	static function get_rightPanelDefaultW():Int return Std.int(FlxG.width - rightPanelX - 5);
-	public static var rightPanelDefaultH(get, never):Int;
-	static function get_rightPanelDefaultH():Int return Std.int(FlxG.height - Std.int(editorDefaultY) - 30);
-
-	public static var previewDefaultWidth(get, never):Int;
-	static function get_previewDefaultWidth():Int return Std.int(FlxG.width * previewScale);
-	public static var previewDefaultHeight(get, never):Int;
-	static function get_previewDefaultHeight():Int return Std.int(FlxG.height * previewScale);
-
-	public static function previewCenterX():Float
+	public static function previewCamX(scale:Float):Float
 	{
-		return (FlxG.width - previewDefaultWidth) * 0.5;
-}
-
-	public static function previewCenterY():Float
-	{
-		return 40.0;
+		return (FlxG.width - FlxG.width * scale) * 0.5;
 	}
+
+	public static function previewCamY(scale:Float):Float
+	{
+		var previewH = FlxG.height - TIMELINE_HEIGHT;
+		return (previewH - previewH * scale) * 0.5;
+	}
+
+	public static var editorPreviewH(get, never):Float;
+	static function get_editorPreviewH():Float return FlxG.height - TIMELINE_HEIGHT;
 }

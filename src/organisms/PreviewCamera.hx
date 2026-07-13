@@ -3,23 +3,27 @@ package organisms;
 import flixel.FlxCamera;
 import flixel.FlxG;
 import flixel.math.FlxPoint;
+import flixel.math.FlxMath;
 import flixel.group.FlxGroup;
 import flixel.group.FlxGroup.FlxTypedGroup;
+import flixel.FlxSprite;
+import flixel.util.FlxColor;
+import flixel.util.FlxSort;
+using StringTools;
 
 import game.Boyfriend;
 import game.Character;
 import game.StageGroup;
-import game.Note;
-import game.StrumNote;
-import game.NoteSplash;
 import game.Conductor;
+import game.StrumNote;
 import utilities.NoteVariables;
-import utilities.Options;
+import Paths;
 import pages.ModchartEditor;
 import states.PlayState;
 import templates.EditorLayout;
-
-using StringTools;
+import utilities.Options;
+import utilities.CoolUtil;
+import openfl.Assets;
 
 class PreviewCamera
 {
@@ -29,7 +33,6 @@ class PreviewCamera
 	public var boyfriend:Boyfriend;
 	public var gf:Character;
 
-	// modifier accumulators (camGame only)
 	public var modZoom:Float = 1.0;
 	public var modAngle:Float = 0.0;
 	public var modPosX:Float = 0.0;
@@ -37,48 +40,53 @@ class PreviewCamera
 	public var modFollowX:Float = 0.0;
 	public var modFollowY:Float = 0.0;
 
-	// HUD camera (strumNotes + notes, never affected by modifiers)
-	public var camHUD:FlxCamera;
-	public var hudContainer:FlxGroup;
+	public var strumLines:Array<Array<FlxSprite>> = [];
 
-	// strum & note groups
-	public var strumLineNotes:FlxTypedGroup<StrumNote>;
-	public var playerStrums:FlxTypedGroup<StrumNote>;
-	public var enemyStrums:FlxTypedGroup<StrumNote>;
-	public var notesGroup:FlxTypedGroup<Note>;
-	public var splashGroup:FlxTypedGroup<NoteSplash>;
-
-	var unspawnNotes:Array<Note> = [];
-
-	// shared positioning (single source of truth)
-	var laneWidth:Float = Note.swagWidth;
-	var laneSpacing:Float = 4;
-	var strumLineY:Float;
+	public var notes:FlxTypedGroup<EditorNote>;
+	public var unspawnNotes:Array<EditorNote>;
+	public var centerCamera:Bool = true;
+	public var curScale:Float = 0.5;
+	public var lastSongPos:Float = 0.0;
+	public var firstFrame:Bool = true;
+	public var lastWasDragging:Bool = false;
+	public var loadedNotes:Array<EditorNote> = [];
 
 	var previewCam:FlxCamera;
 	var state:ModchartEditor;
-
-	// like CNE's camScale
-	var normalScale:Float;
-	var initialScrollX:Float = 0;
-	var initialScrollY:Float = 0;
-
-	var isDraggingStage:Bool = false;
-	var stagePanLastMouse:FlxPoint = null;
+	var prevFullscreen:Bool = false;
+	var ui_settings:Array<String>;
+	var mania_size:Array<String>;
 
 	public function new(state:ModchartEditor)
 	{
 		this.state = state;
-		this.previewCam = FlxG.camera;
+		previewCam = new FlxCamera(0, 0, FlxG.width, FlxG.height, 1);
+		previewCam.bgColor = 0;
 	}
 
-	public function create(owner:ModchartEditor):Void
+	public function playCharAnim(char:game.Character, anim:String)
+	{
+		if (char == null) return;
+		if (char.animation != null && char.animation.curAnim != null && char.animation.curAnim.name.startsWith(anim)) {
+			// do nothing, already playing
+		} else {
+			char.playAnim(anim, true);
+		}
+		char.holdTimer = 0;
+	}
+
+	public function danceChar(char:game.Character)
+	{
+		if (char == null) return;
+		char.dance();
+	}
+
+	public function create(?owner:ModchartEditor):Void
 	{
 		if (PlayState.SONG == null) return;
 
-		normalScale = EditorLayout.previewScale;
+		FlxG.cameras.add(previewCam);
 
-		// --- camGame layer ---
 		gameplayContainer = new FlxGroup();
 		gameplayContainer.cameras = [previewCam];
 
@@ -86,230 +94,202 @@ class PreviewCamera
 		stage.cameras = [previewCam];
 		gameplayContainer.add(stage);
 
+		function addCharacter(char:game.Character):Void
+		{
+			if (char == null) return;
+			if (char.isCharacterGroup && char.otherCharacters != null)
+			{
+				for (c in char.otherCharacters) addCharacter(c);
+			}
+			if (char.frames != null)
+			{
+				char.cameras = [previewCam];
+				gameplayContainer.add(char);
+			}
+		}
+
 		gf = new Character(400, 130, PlayState.SONG.gf != null ? PlayState.SONG.gf : "gf");
-		addCharacterToContainer(gf);
+		addCharacter(gf);
 
 		dad = new Character(100, 100, PlayState.SONG.player2);
-		addCharacterToContainer(dad);
+		addCharacter(dad);
 
 		boyfriend = new Boyfriend(770, 450, PlayState.SONG.player1);
-		addCharacterToContainer(boyfriend);
+		addCharacter(boyfriend);
 
 		stage.setCharOffsets(boyfriend, gf, dad);
 
-		dad.cameraOffset[0] += stage.p2_Cam_Offset.x;
-		dad.cameraOffset[1] += stage.p2_Cam_Offset.y;
-
-		boyfriend.cameraOffset[0] += stage.p1_Cam_Offset.x;
-		boyfriend.cameraOffset[1] += stage.p1_Cam_Offset.y;
-
-		owner.add(gameplayContainer);
-
-		// --- init camera like CNE: one-time focus on boyfriend ---
-		var focusX = boyfriend.getMidpoint().x + boyfriend.cameraOffset[0];
-		var focusY = boyfriend.getMidpoint().y + boyfriend.cameraOffset[1];
-		previewCam.focusOn(FlxPoint.get(focusX, focusY));
-		previewCam.zoom = calcBaseZoom();
-		previewCam.angle = 0;
-		initialScrollX = previewCam.scroll.x;
-		initialScrollY = previewCam.scroll.y;
-
-		// --- apply initial CNE-style scale & position ---
-		applyCamScale(normalScale);
-
-		// --- camHUD layer ---
-		camHUD = new FlxCamera();
-		camHUD.bgColor = 0;
-		FlxG.cameras.add(camHUD, false);
-
-		FlxG.cameras.list.remove(camHUD);
-		var editorIndex = FlxG.cameras.list.indexOf(owner.camEditor);
-		if (editorIndex != -1)
-			FlxG.cameras.list.insert(editorIndex, camHUD);
+		// Load UI skin configs
+		var uiSkin:String = PlayState.SONG.ui_Skin != null ? PlayState.SONG.ui_Skin : "default";
+		ui_settings = [];
+		mania_size = [];
+		var mania_offset:Array<String> = [];
+		var mania_gap:Array<String> = [];
+		if (Assets.exists(Paths.txt("ui skins/" + uiSkin + "/config")))
+			ui_settings = CoolUtil.coolTextFile(Paths.txt("ui skins/" + uiSkin + "/config"));
+		if (Assets.exists(Paths.txt("ui skins/" + uiSkin + "/maniasize")))
+			mania_size = CoolUtil.coolTextFile(Paths.txt("ui skins/" + uiSkin + "/maniasize"));
+		if (Assets.exists(Paths.txt("ui skins/" + uiSkin + "/maniaoffset")))
+			mania_offset = CoolUtil.coolTextFile(Paths.txt("ui skins/" + uiSkin + "/maniaoffset"));
+		if (Assets.exists(Paths.txt("ui skins/" + uiSkin + "/maniagap")))
+			mania_gap = CoolUtil.coolTextFile(Paths.txt("ui skins/" + uiSkin + "/maniagap"));
 		else
-			FlxG.cameras.list.push(camHUD);
+			mania_gap = CoolUtil.coolTextFile(Paths.txt("ui skins/default/maniagap"));
 
-		applyCamScaleTo(camHUD, normalScale);
+		function safeFloat(arr:Array<String>, idx:Int, fallback:Float = 0):Float
+			return (arr != null && idx >= 0 && idx < arr.length) ? Std.parseFloat(arr[idx]) : fallback;
 
-		hudContainer = new FlxGroup();
-		hudContainer.cameras = [camHUD];
-		owner.add(hudContainer);
+		// Strums on camHUD
+		strumLines = [];
+		curScale = state.isPreviewFullscreen ? 1.0 : 0.5;
+		var camY = ((-FlxG.height / 4) + 32) * (-((curScale - 0.5) * 2) + 1);
+		var strumScreenY:Float = Options.getData("downscroll") == true ? FlxG.height - 100 : 100;
+		var strumGameY:Float = (strumScreenY - camY) / curScale;
+		var playerKeyCount:Int = (PlayState.SONG.playerKeyCount != null) ? PlayState.SONG.playerKeyCount : 4;
+		var enemyKeyCount:Int = (PlayState.SONG.keyCount != null) ? PlayState.SONG.keyCount : 4;
 
-		var downVal:Dynamic = Options.getData("downscroll");
-		var isDownscroll = downVal == true;
-		if (!isDownscroll && Std.is(downVal, String)) isDownscroll = downVal == "true";
-		strumLineY = isDownscroll ? FlxG.height - 100 : 50;
-		setupStrumNotes();
+		// Enemy strums
+		var enemyLine:Array<FlxSprite> = [];
+		for (i in 0...enemyKeyCount)
+		{
+			var babyArrow:FlxSprite = new StrumNote(0, 0, i, uiSkin, ui_settings, mania_size, enemyKeyCount, 0);
+			babyArrow.scrollFactor.set();
+			babyArrow.cameras = [state.camHUD];
+			babyArrow.ID = i;
+			babyArrow.x = (babyArrow.width + 2 + safeFloat(mania_gap, enemyKeyCount - 1)) * i
+				+ safeFloat(mania_offset, enemyKeyCount - 1);
+			babyArrow.x += 100 - ((enemyKeyCount - 4) * 16) + (enemyKeyCount >= 10 ? 30 : 0);
+			babyArrow.y = strumGameY - (babyArrow.height / 2);
+			state.add(babyArrow);
+			enemyLine.push(babyArrow);
+		}
+		strumLines.push(enemyLine);
+
+		// Player strums
+		var playerLine:Array<FlxSprite> = [];
+		for (i in 0...playerKeyCount)
+		{
+			var babyArrow:FlxSprite = new StrumNote(0, 0, i, uiSkin, ui_settings, mania_size, playerKeyCount, 1);
+			babyArrow.scrollFactor.set();
+			babyArrow.cameras = [state.camHUD];
+			babyArrow.ID = i;
+			babyArrow.x = (babyArrow.width + 2 + safeFloat(mania_gap, playerKeyCount - 1)) * i
+				+ safeFloat(mania_offset, playerKeyCount - 1);
+			babyArrow.x += 100 - ((playerKeyCount - 4) * 16) + (playerKeyCount >= 10 ? 30 : 0);
+			babyArrow.x += FlxG.width / 2;
+			babyArrow.y = strumGameY - (babyArrow.height / 2);
+			state.add(babyArrow);
+			playerLine.push(babyArrow);
+		}
+		strumLines.push(playerLine);
+
+		state.add(gameplayContainer);
+
+		// Initialize camHUD transforms so notes/strums are visible from frame 1
+		var initCurScale = state.isPreviewFullscreen ? 1.0 : 0.5;
+		var initCamY = ((-FlxG.height / 4) + 32) * (-((initCurScale - 0.5) * 2) + 1);
+		
+		previewCam.flashSprite.scaleX = previewCam.flashSprite.scaleY = initCurScale;
+		if (state.camHUD != null)
+		{
+			state.camHUD.flashSprite.scaleX = state.camHUD.flashSprite.scaleY = initCurScale;
+			state.camHUD.y = initCamY;
+		}
+		
+		var initStrumScreenY:Float = Options.getData("downscroll") == true ? FlxG.height - 100 : 100;
+		var initStrumGameY:Float = (initStrumScreenY - initCamY) / initCurScale;
+		if (state.camHUD != null)
+		{
+			state.camHUD.scroll.y = initStrumGameY - initStrumScreenY;
+		}
+
+		// Notes
+		notes = new FlxTypedGroup<EditorNote>();
+		notes.cameras = [state.camHUD];
+		state.add(notes);
+		unspawnNotes = [];
 		generateNotes();
 
-		hideNullFrameSprites();
-	}
+		// Initial camera position (will be smoothed by updateCamera)
+		var focusX = boyfriend.getMidpoint().x + boyfriend.cameraOffset[0];
+		var focusY = boyfriend.getMidpoint().y + boyfriend.cameraOffset[1];
+		previewCam.scroll.x = focusX - FlxG.width * 0.5;
+		previewCam.scroll.y = focusY - FlxG.height * 0.5;
+		previewCam.zoom = stage.camZoom != 0 ? stage.camZoom : 1.0;
 
-	function hideNullFrameSprites():Void
-	{
-		function recurse(group:FlxGroup)
-		{
-			for (member in group.members)
-			{
-				if (member == null) continue;
-				if (Std.isOfType(member, FlxGroup))
-					recurse(cast member);
-				else if (Std.isOfType(member, flixel.FlxSprite) && cast(member, flixel.FlxSprite).frames == null)
-					cast(member, flixel.FlxSprite).visible = false;
-			}
-		}
-		recurse(gameplayContainer);
-		recurse(hudContainer);
-	}
-
-	function applyCamScale(scale:Float):Void
-	{
-		previewCam.flashSprite.scaleX = previewCam.flashSprite.scaleY = scale;
-		previewCam.y = (-180 + 32) * (-((scale - 0.5) * 2) + 1);
-		previewCam.x = (FlxG.width - Std.int(FlxG.width * scale)) * 0.5;
-	}
-
-	function applyCamScaleTo(cam:FlxCamera, scale:Float):Void
-	{
-		cam.flashSprite.scaleX = cam.flashSprite.scaleY = scale;
-		cam.y = (-180 + 32) * (-((scale - 0.5) * 2) + 1);
-		cam.x = (FlxG.width - Std.int(FlxG.width * scale)) * 0.5;
-	}
-
-	function addCharacterToContainer(char:Character):Void
-	{
-		if (char == null) return;
-
-		char.cameras = [previewCam];
-		if (char.frames == null) char.visible = false;
-		gameplayContainer.add(char);
-
-		if (char.otherCharacters != null)
-		{
-			for (c in char.otherCharacters)
-			{
-				if (c == null) continue;
-				c.cameras = [previewCam];
-				if (c.frames == null) c.visible = false;
-				gameplayContainer.add(c);
-			}
-		}
-	}
-
-	function setupStrumNotes():Void
-	{
-		strumLineNotes = new FlxTypedGroup<StrumNote>();
-		playerStrums = new FlxTypedGroup<StrumNote>();
-		enemyStrums = new FlxTypedGroup<StrumNote>();
-
-		generateStaticArrows(false);
-		generateStaticArrows(true);
-
-		hudContainer.add(strumLineNotes);
-	}
-
-	function generateStaticArrows(?isPlayer:Bool = false):Void
-	{
-		var usedKeyCount:Int = isPlayer ? PlayState.SONG.playerKeyCount : PlayState.SONG.keyCount;
-		var strOffset:Float = isPlayer ? 0.75 : 0.25;
-		var totalLaneWidth = usedKeyCount * laneWidth + (usedKeyCount - 1) * laneSpacing;
-		var startX = (FlxG.width * strOffset) - totalLaneWidth / 2;
-
-		for (i in 0...usedKeyCount)
-		{
-			var babyArrow = new StrumNote(0, 0, i);
-			babyArrow.scrollFactor.set();
-			babyArrow.ID = i;
-			babyArrow.x = startX + i * (laneWidth + laneSpacing);
-			babyArrow.y = strumLineY;
-
-			if (babyArrow.frames == null) babyArrow.visible = false;
-
-			if (strumLineNotes.members.length == 0 && babyArrow.swagWidth > 0)
-				laneWidth = babyArrow.swagWidth;
-
-			if (isPlayer)
-				playerStrums.add(babyArrow);
-			else
-				enemyStrums.add(babyArrow);
-
-			strumLineNotes.add(babyArrow);
-		}
+		// Reposition strums to align correctly from startup
+		repositionStrums();
 	}
 
 	function generateNotes():Void
 	{
-		notesGroup = new FlxTypedGroup<Note>();
-		splashGroup = new FlxTypedGroup<NoteSplash>();
-
 		var song = PlayState.SONG;
-		var songNotes = song.notes;
+		if (song == null || song.notes == null) return;
 
-		for (section in songNotes)
+		for (section in song.notes)
 		{
-			var secNotes = section.sectionNotes;
-			if (secNotes == null) continue;
+			Conductor.recalculateStuff(1);
 
-			for (rawNote in secNotes)
+			for (songNotes in section.sectionNotes)
 			{
-				var strumTime:Float = rawNote[0];
-				var noteData:Int = Std.int(rawNote[1]);
-				var sustainLength:Float = (rawNote[2] != null) ? rawNote[2] : 0;
-				var charIndex:Int = (rawNote[3] != null && Std.isOfType(rawNote[3], Int)) ? rawNote[3] : 0;
-				var arrowType:String = (rawNote[4] != null && Std.isOfType(rawNote[4], String)) ? rawNote[4] : "default";
+				var daStrumTime:Float = songNotes[0] + Conductor.offset + song.chartOffset;
+				var keyCount:Int = song.keyCount;
+				var playerKeyCount:Int = song.playerKeyCount;
+				var totalKeys:Int = keyCount + playerKeyCount;
 
+				var rawNote:Int = Std.int(Math.abs(songNotes[1]));
+				// noteData mod total keys (matching PlayState's first step)
+				var noteDataMod:Int = rawNote % totalKeys;
+
+				// resolveMustPress logic (PlayState line 1485-1497)
 				var mustPress:Bool = section.mustHitSection;
-				if (charIndex == 1) mustPress = false;
-				else if (charIndex == 2) mustPress = true;
+				if (noteDataMod >= (mustPress ? playerKeyCount : keyCount))
+					mustPress = !mustPress;
 
-				if (mustPress && noteData >= song.playerKeyCount)
-					noteData = (noteData - song.playerKeyCount) % song.keyCount;
-				else if (!mustPress && noteData >= song.keyCount)
-				{
-					var playerKC = song.playerKeyCount;
-					noteData = (noteData - song.keyCount) % (playerKC > 0 ? playerKC : song.keyCount);
-				}
+				// Adjust noteData to be within the correct side's range (PlayState lines 1561-1566)
+				var editorNoteData:Int;
+				if (section.mustHitSection)
+					editorNoteData = noteDataMod >= playerKeyCount
+						? (noteDataMod - playerKeyCount) % keyCount
+						: noteDataMod;
+				else
+					editorNoteData = noteDataMod >= keyCount
+						? (noteDataMod - keyCount) % playerKeyCount
+						: noteDataMod;
 
-				var oldNote:Note = (unspawnNotes.length > 0) ? unspawnNotes[unspawnNotes.length - 1] : null;
+				var arrowType:String = (songNotes.length > 4 && Std.isOfType(songNotes[4], String))
+					? songNotes[4] : "default";
 
-				var swagNote = new Note(strumTime, noteData, oldNote, false, charIndex, arrowType, song, null, mustPress, false);
+				var localKeyCount = mustPress ? playerKeyCount : keyCount;
+
+				var swagNote = new EditorNote(daStrumTime, editorNoteData, false, arrowType,
+					mustPress, ui_settings, mania_size, localKeyCount);
+				swagNote.sustainLength = songNotes[2];
 				swagNote.scrollFactor.set();
-				swagNote.sustainLength = sustainLength;
-				swagNote.mustPress = mustPress;
+				swagNote.cameras = [state.camHUD];
 				unspawnNotes.push(swagNote);
 
-				var sustainGroup:Array<Note> = [];
-
-				for (j in 0...Math.floor(sustainLength / Std.int(Conductor.stepCrochet)))
+				// Sustain notes
+				var sustainSteps:Int = Math.floor(swagNote.sustainLength / Std.int(Conductor.stepCrochet));
+				for (i in 0...sustainSteps)
 				{
-					oldNote = unspawnNotes[unspawnNotes.length - 1];
-
-					var sustainNote = new Note(
-						strumTime + (Conductor.stepCrochet * j) + (Conductor.stepCrochet / 1),
-						noteData,
-						oldNote,
-						true,
-						charIndex,
-						arrowType,
-						song,
-						null,
-						mustPress,
-						false
+					var isEnd:Bool = (i == sustainSteps - 1);
+					var sustainNote = new EditorNote(
+						daStrumTime + Conductor.stepCrochet * i
+						+ (Conductor.stepCrochet / FlxMath.roundDecimal(song.speed, 2)),
+						editorNoteData, true, arrowType,
+						mustPress, ui_settings, mania_size, localKeyCount, isEnd
 					);
 					sustainNote.scrollFactor.set();
-					sustainNote.sustainLength = sustainLength;
-					sustainNote.mustPress = mustPress;
+					sustainNote.speed = swagNote.speed;
+					sustainNote.cameras = [state.camHUD];
 					unspawnNotes.push(sustainNote);
-					sustainGroup.push(sustainNote);
 				}
-
-				swagNote.sustains = sustainGroup;
 			}
 		}
 
-		unspawnNotes.sort(function(a, b) return Std.int(a.strumTime - b.strumTime));
-		hudContainer.add(notesGroup);
-		hudContainer.add(splashGroup);
+		unspawnNotes.sort(function(a, b) return FlxSort.byValues(FlxSort.ASCENDING, a.strumTime, b.strumTime));
+		loadedNotes = unspawnNotes.copy();
 	}
 
 	public function resetModifiers():Void
@@ -322,289 +302,257 @@ class PreviewCamera
 		modFollowY = 0.0;
 	}
 
+	public function resetNotes():Void
+	{
+		if (notes != null) {
+			notes.clear();
+		}
+		unspawnNotes = [];
+		for (n in loadedNotes)
+		{
+			n.revive();
+			n.wasGoodHit = false;
+			n.canBeHit = false;
+			n.active = true;
+			n.visible = false;
+			n.y = -2000;
+			if (n.strumTime + n.sustainLength >= Conductor.songPosition - 100)
+			{
+				unspawnNotes.push(n);
+			}
+		}
+		unspawnNotes.sort(function(a, b) return FlxSort.byValues(FlxSort.ASCENDING, a.strumTime, b.strumTime));
+	}
+
+	public function repositionStrums():Void
+	{
+		var camY = ((-FlxG.height / 4) + 32) * (-((curScale - 0.5) * 2) + 1);
+		var strumScreenY:Float = Options.getData("downscroll") == true ? FlxG.height - 100 : 100;
+		var centerY = FlxG.height / 2;
+		var strumGameY:Float = centerY + (strumScreenY - camY - centerY) / curScale;
+		for (line in strumLines)
+			for (s in line)
+			{
+				s.y = strumGameY - (s.height / 2);
+				// Do not overwrite local key-count scale
+			}
+	}
+
 	public function update(elapsed:Float):Void
 	{
+		if (firstFrame)
+		{
+			firstFrame = false;
+			repositionStrums();
+		}
+
 		if (stage != null) stage.update(elapsed);
 
-		// --- CNE-style updateUI: lerp flashSprite.scale ---
-		var targetScale = state.isPreviewFullscreen ? 1.0 : normalScale;
-		var curScale = previewCam.flashSprite.scaleX;
+		// Reset notes if song is seeked backward, but not while dragging the scrollbar (avoiding lag)
+		var songPos:Float = Conductor.songPosition;
+		var isDraggingScrollbar = (state.durationScrollbar != null && state.durationScrollbar.isDragging);
+		if (songPos < lastSongPos && !isDraggingScrollbar)
+		{
+			resetNotes();
+		}
+		if (lastWasDragging && !isDraggingScrollbar)
+		{
+			resetNotes();
+		}
+		lastWasDragging = isDraggingScrollbar;
+		lastSongPos = songPos;
+
+		// CNE-style flashSprite scaling
+		var targetScale = state.isPreviewFullscreen ? 1.0 : 0.5;
 		curScale += (targetScale - curScale) * 0.15;
 		if (Math.abs(targetScale - curScale) < 0.01) curScale = targetScale;
-		applyCamScale(curScale);
-		applyCamScaleTo(camHUD, curScale);
-
-		// --- apply modifiers directly (like CNE: no follow system) ---
-		previewCam.zoom = calcBaseZoom() * modZoom;
-		previewCam.angle = modAngle;
-
-		// Stage dragging / panning (CNE-style)
-		var wantsPan = FlxG.mouse.pressedRight || (FlxG.mouse.pressed && FlxG.keys.pressed.ALT);
-		if (wantsPan && !state.isPreviewFullscreen)
+		
+		previewCam.flashSprite.scaleX = previewCam.flashSprite.scaleY = curScale;
+		if (state.camHUD != null)
 		{
-			var mouse = FlxG.mouse.getScreenPosition();
-			if (!isDraggingStage)
-			{
-				isDraggingStage = true;
-				if (stagePanLastMouse == null) stagePanLastMouse = FlxPoint.get();
-				stagePanLastMouse.set(mouse.x, mouse.y);
-			}
-			else
-			{
-				var zoom = previewCam.zoom;
-				if (zoom <= 0) zoom = 0.001;
+			state.camHUD.flashSprite.scaleX = state.camHUD.flashSprite.scaleY = curScale;
+		}
 
-				var dx = mouse.x - stagePanLastMouse.x;
-				var dy = mouse.y - stagePanLastMouse.y;
+		// CNE-style Y-offset
+		var camY = ((-FlxG.height / 4) + 32) * (-((curScale - 0.5) * 2) + 1);
+		previewCam.y = camY;
+		if (state.camHUD != null)
+		{
+			state.camHUD.y = camY;
+			var strumScreenY:Float = Options.getData("downscroll") == true ? FlxG.height - 100 : 100;
+			var centerY = FlxG.height / 2;
+			var strumGameY:Float = centerY + (strumScreenY - camY - centerY) / curScale;
+			state.camHUD.scroll.y = strumGameY - strumScreenY;
+		}
 
-				initialScrollX -= dx / zoom;
-				initialScrollY -= dy / zoom;
+		// Camera follow
+		updateCamera(elapsed);
 
-				stagePanLastMouse.set(mouse.x, mouse.y);
-			}
+		repositionStrums();
+
+		// Notes
+		updateNotes();
+	}
+
+	function updateCamera(elapsed:Float):Void
+	{
+		var targetX:Float, targetY:Float;
+
+		if (centerCamera)
+		{
+			var midPos = boyfriend.getMainCharacter().getMidpoint();
+			midPos.x += stage.p1_Cam_Offset.x;
+			midPos.y += stage.p1_Cam_Offset.y;
+			targetX = midPos.x - 100 + boyfriend.getMainCharacter().cameraOffset[0];
+			targetY = midPos.y - 100 + boyfriend.getMainCharacter().cameraOffset[1];
+			midPos.put();
+
+			midPos = dad.getMainCharacter().getMidpoint();
+			midPos.x += stage.p2_Cam_Offset.x;
+			midPos.y += stage.p2_Cam_Offset.y;
+			targetX += midPos.x + 150 + dad.getMainCharacter().cameraOffset[0];
+			targetY += midPos.y - 100 + dad.getMainCharacter().cameraOffset[1];
+			targetX *= 0.5;
+			targetY *= 0.5;
+			midPos.put();
 		}
 		else
 		{
-			isDraggingStage = false;
-			if (stagePanLastMouse != null)
+			var bfMid = boyfriend.getMainCharacter().getMidpoint();
+			targetX = bfMid.x - 100 + stage.p1_Cam_Offset.x + boyfriend.getMainCharacter().cameraOffset[0];
+			targetY = bfMid.y - 100 + stage.p1_Cam_Offset.y + boyfriend.getMainCharacter().cameraOffset[1];
+			bfMid.put();
+		}
+
+		var lerpVal:Float = 0.04 * FlxG.elapsed * 60;
+		if (lerpVal > 1) lerpVal = 1;
+
+		previewCam.scroll.x = FlxMath.lerp(previewCam.scroll.x, targetX - FlxG.width * 0.5, lerpVal);
+		previewCam.scroll.y = FlxMath.lerp(previewCam.scroll.y, targetY - FlxG.height * 0.5, lerpVal);
+
+		previewCam.zoom = (stage != null ? stage.camZoom : 1.0) * modZoom;
+		previewCam.angle = modAngle;
+		previewCam.scroll.x += modPosX + modFollowX;
+		previewCam.scroll.y += modPosY + modFollowY;
+	}
+
+	function updateNotes():Void
+	{
+		if (notes == null || unspawnNotes == null) return;
+
+		var songPos:Float = Conductor.songPosition;
+
+		// Spool notes from unspawnNotes to active group
+		while (unspawnNotes.length > 0 && unspawnNotes[0].strumTime - songPos < 1500)
+		{
+			var note = unspawnNotes.shift();
+			notes.add(note);
+		}
+
+		notes.forEachAlive(function(note:EditorNote)
+		{
+			var enemyStrumLen = strumLines[0].length;
+			var playerStrumLen = strumLines.length > 1 ? strumLines[1].length : 0;
+
+			var coolStrum:StrumNote;
+			if (!note.mustPress)
+				coolStrum = cast strumLines[0][Std.int(Math.abs(note.noteData)) % enemyStrumLen];
+			else
+				coolStrum = cast strumLines[1][Std.int(Math.abs(note.noteData)) % playerStrumLen];
+
+			if (coolStrum == null) return;
+
+			note.visible = true;
+			note.active = true;
+			note.calculateY(coolStrum);
+
+			// Align X to strum center (PlayState-style) - Optimized O(1)
+			note.x = coolStrum.x + (coolStrum.width / 2) - (note.width / 2);
+
+			note.calculateCanBeHit();
+
+			// Auto-hit enemy notes -> character singing + strum confirm
+			if (!note.mustPress && songPos >= note.strumTime && !note.wasGoodHit)
 			{
-				stagePanLastMouse.put();
-				stagePanLastMouse = null;
+				var keyCount = (PlayState.SONG.keyCount != null) ? PlayState.SONG.keyCount : 4;
+				var animIndex = Std.int(Math.abs(note.noteData)) % keyCount;
+				var singAnim:String = NoteVariables.characterAnimations[
+					keyCount - 1
+				][animIndex];
+
+				playCharAnim(dad, singAnim);
+
+				var spr = cast(strumLines[0][Std.int(Math.abs(note.noteData)) % enemyStrumLen], StrumNote);
+				if (spr != null)
+				{
+					spr.playAnim('confirm', true);
+					spr.resetAnim = 0.2;
+				}
+
+				note.wasGoodHit = true;
 			}
-		}
 
-		// modPos and modFollow offset the camera scroll directly (CNE-style: properties set directly)
-		previewCam.scroll.x = initialScrollX + modPosX + modFollowX;
-		previewCam.scroll.y = initialScrollY + modPosY + modFollowY;
+			// Auto-hit player notes -> character singing + strum confirm
+			if (note.mustPress && songPos >= note.strumTime && !note.wasGoodHit)
+			{
+				var playerKeyCount = (PlayState.SONG.playerKeyCount != null) ? PlayState.SONG.playerKeyCount : 4;
+				var animIndex = Std.int(Math.abs(note.noteData)) % playerKeyCount;
+				var singAnim:String = NoteVariables.characterAnimations[
+					playerKeyCount - 1
+				][animIndex];
 
-		updateVocalsVolume(elapsed);
+				playCharAnim(boyfriend, singAnim);
 
-		// --- splash cleanup ---
-		splashGroup.forEachAlive(function(splash:NoteSplash) {
-			if (splash.animation != null && splash.animation.finished)
-				splash.kill();
-		});
+				var spr = cast(strumLines[1][Std.int(Math.abs(note.noteData)) % playerStrumLen], StrumNote);
+				if (spr != null)
+				{
+					spr.playAnim('confirm', true);
+					spr.resetAnim = 0.2;
+				}
 
-		// --- note spawning ---
-		var songPos = Conductor.songPosition;
-		while (unspawnNotes.length > 0 && unspawnNotes[0].strumTime - songPos < 1500.0)
-		{
-			var note = unspawnNotes[0];
-			if (note.frames == null) note.visible = false;
-			notesGroup.add(note);
-			unspawnNotes.splice(0, 1);
-		}
+				note.wasGoodHit = true;
+			}
 
-		// --- note cleanup ---
-		var i = notesGroup.members.length;
-		while (i-- > 0)
-		{
-			var note = notesGroup.members[i];
-			if (note != null && note.strumTime + 2000 < songPos)
+			// Kill/remove notes that have been hit and passed the strumline (safely using note.kill() to avoid group mutation crash)
+			var killTime = note.strumTime + (note.isSustainNote ? Conductor.stepCrochet : 0);
+			if (songPos >= killTime)
 			{
 				note.kill();
-				note.destroy();
-				notesGroup.remove(note);
+				return;
 			}
-		}
 
-		// --- note update & auto-singing ---
-		if (notesGroup != null && playerStrums.members.length > 0 && enemyStrums.members.length > 0)
-		{
-			notesGroup.forEachAlive(function(note:Note)
+			// Player notes: mirror strum visual state
+			if (note.mustPress)
 			{
-				if (note.frames == null) return;
-
-				var coolStrum:StrumNote = (note.mustPress
-					? playerStrums.members[Math.floor(Math.abs(note.noteData)) % playerStrums.members.length]
-					: enemyStrums.members[Math.floor(Math.abs(note.noteData)) % enemyStrums.members.length]);
-				if (coolStrum == null || coolStrum.frames == null) return;
-
-				note.visible = true;
-				note.active = true;
-				note.scale.set(coolStrum.scale.x, coolStrum.scale.y);
-				note.calculateY(coolStrum);
-
-				if (note.isSustainNote)
+				var spr = cast(strumLines[1][Std.int(Math.abs(note.noteData)) % playerStrumLen], StrumNote);
+				if (spr != null)
 				{
-					var swagRect = new flixel.math.FlxRect(0, 0, note.frameWidth, note.frameHeight);
-					swagRect.y = (coolStrum.y + (coolStrum.height / 2) - note.y) / note.scale.y;
-					swagRect.height -= swagRect.y;
-					note.clipRect = swagRect;
-				}
-
-				note.calculateCanBeHit();
-				if (note.canBeHit && !note.wasGoodHit)
-				{
-					triggerCharacterSing(note);
-
+					note.visible = spr.visible;
+					if (spr.alpha != 1)
+						note.alpha = note.isSustainNote ? 0.6 * spr.alpha : spr.alpha;
 					if (!note.isSustainNote)
-					{
-						var strumIndex = Math.floor(Math.abs(note.noteData));
-						if (note.mustPress)
-							playerStrums.members[strumIndex % playerStrums.members.length]?.playAnim('confirm', true);
-						else
-							enemyStrums.members[strumIndex % enemyStrums.members.length]?.playAnim('confirm', true);
-					}
-
-					note.wasGoodHit = true;
-					if (note.isSustainNote) note.shouldHit = false;
+						note.modAngle = spr.angle;
+					note.flipX = spr.flipX;
+					if (!note.isSustainNote)
+						note.flipY = spr.flipY;
+					note.color = spr.color;
 				}
-
-				if (coolStrum != null)
-				{
-					note.x = coolStrum.x;
-					note.visible = coolStrum.visible;
-				}
-
-				if (note.tooLate && note.alpha > 0.3) note.alpha = 0.3;
-			});
-		}
-	}
-
-	function triggerCharacterSing(note:Note):Void
-	{
-		var singAnim:String = NoteVariables.characterAnimations[PlayState.SONG.keyCount - 1][Std.int(Math.abs(note.noteData))]
-			+ note.singAnimSuffix;
-
-		if (note.singAnimPrefix != 'sing')
-			singAnim = singAnim.replace('sing', note.singAnimPrefix);
-
-		if (note.character == 2)
-		{
-			if (gf != null) { gf.playAnim(singAnim, true); gf.holdTimer = 0; }
-		}
-		else if (note.mustPress)
-		{
-			boyfriend?.playAnim(singAnim, true);
-			if (boyfriend != null) boyfriend.holdTimer = 0;
-		}
-		else
-		{
-			dad?.playAnim(singAnim, true);
-			if (dad != null) dad.holdTimer = 0;
-		}
-
-		if (!note.isSustainNote)
-		{
-			if (note.character == 2)
-				noteSplash(note);
-			else if (note.mustPress)
-				noteSplash(note);
-		}
-
-		vocalsVolume();
-	}
-
-	function noteSplash(note:Note):Void
-	{
-		var strum = playerStrums.members[Math.floor(Math.abs(note.noteData)) % playerStrums.members.length];
-		if (strum == null) return;
-
-		var splash = splashGroup.recycle(NoteSplash);
-		splash.setup_splash(strum.ID, strum, note.mustPress);
-		if (splash.frames == null) { splash.kill(); return; }
-	}
-
-	var vocalsVolumeTimer:Float = 0;
-
-	function vocalsVolume():Void
-	{
-		if (state?.vocals != null) state.vocals.volume = 1;
-		vocalsVolumeTimer = 0.2;
-	}
-
-	function updateVocalsVolume(elapsed:Float):Void
-	{
-		if (vocalsVolumeTimer > 0)
-		{
-			vocalsVolumeTimer -= elapsed;
-			if (vocalsVolumeTimer <= 0 && state?.vocals != null)
-				state.vocals.volume = 0;
-		}
-	}
-
-	function calcBaseZoom():Float
-	{
-		if (stage == null) return 1.0;
-		return stage.camZoom;
+			}
+		});
 	}
 
 	public function beatHit():Void
 	{
 		if (stage != null) stage.beatHit();
-
-		function resetStrumAnim(spr:StrumNote):Void
-		{
-			if (spr != null && spr.animation.curAnim != null && spr.animation.curAnim.name == "confirm")
-				spr.playAnim("static");
-		}
-
-		if (playerStrums != null) playerStrums.forEach(resetStrumAnim);
-		if (enemyStrums != null) enemyStrums.forEach(resetStrumAnim);
+		danceChar(dad);
+		danceChar(boyfriend);
+		danceChar(gf);
 	}
-
-	public function syncViewport():Void
-	{
-		if (camHUD == null) return;
-		var curScale = previewCam.flashSprite.scaleX;
-		applyCamScale(curScale);
-		applyCamScaleTo(camHUD, curScale);
-	}
-
-	public function resetNotes():Void
-	{
-		for (note in notesGroup.members)
-		{
-			if (note != null) { note.kill(); note.destroy(); }
-		}
-		notesGroup.clear();
-		unspawnNotes = [];
-
-		for (splash in splashGroup.members)
-		{
-			if (splash != null) { splash.kill(); splash.destroy(); }
-		}
-		splashGroup.clear();
-
-		generateNotes();
-	}
-
-	public function songEnd():Void
-	{
-		if (notesGroup != null)
-		{
-			notesGroup.forEachAlive(function(note:Note) {
-				note.kill();
-				note.destroy();
-			});
-			notesGroup.clear();
-		}
-		unspawnNotes = [];
-
-		if (splashGroup != null)
-		{
-			splashGroup.forEachAlive(function(splash:NoteSplash) {
-				splash.kill();
-				splash.destroy();
-			});
-			splashGroup.clear();
-		}
-	}
-
 	public function destroy():Void
 	{
-		if (camHUD != null)
-		{
-			FlxG.cameras.remove(camHUD);
-			camHUD.destroy();
-			camHUD = null;
-		}
-
-		if (hudContainer != null)
-		{
-			hudContainer.destroy();
-			hudContainer = null;
-		}
+		if (gameplayContainer != null) gameplayContainer.destroy();
+		if (notes != null) { notes.clear(); notes.destroy(); }
+		if (unspawnNotes != null) { unspawnNotes = null; }
+		if (loadedNotes != null) { for (n in loadedNotes) n.destroy(); loadedNotes = null; }
 	}
 }

@@ -24,7 +24,6 @@ class MenuBar
 		{
 			var measure = new FlxText(0, 0, 0, owner.menus[i].name, 20);
 			measure.setFormat(Paths.font("vcr.ttf"), 20);
-
 			var q = measure.width + 28;
 
 			var b = new FlxSprite(xPos, 7);
@@ -51,9 +50,7 @@ class MenuBar
 			{
 				owner.menuButtonBGs[i].color = ColorConstants.BTN_ACTIVE;
 				owner.menuButtons[i].color = ColorConstants.TXT_ACTIVE;
-
-				if (FlxG.mouse.justPressed)
-					owner.openMenu(i);
+				if (FlxG.mouse.justPressed) owner.openMenu(i);
 			}
 			else if (owner.activeMenuIndex != i)
 			{

@@ -113,23 +113,38 @@ class ModifyModifierPopup extends FlxSubState
 		var rawName = StringTools.trim(nameInput.text);
 		if (rawName == "") rawName = selectedModifier;
 
-		var entry:ModifierEntry = {
-			name: rawName,
-			modifier: selectedModifier,
-			value: 0.0,
-			duration: null,
-			ease: null,
-			type: "set"
-		};
+		var exists = false;
+		for (i in 0...parentState.loadedModifiers.length)
+		{
+			if (parentState.loadedModifiers[i].name == rawName)
+			{
+				parentState.loadedModifiers[i].modifier = selectedModifier;
+				exists = true;
+				break;
+			}
+		}
 
-		parentState.loadedModifiers.push(entry);
-		parentState.modifierList.rebuildList();
+		if (!exists)
+		{
+			var entry:ModifierEntry = {
+				name: rawName,
+				modifier: selectedModifier,
+				value: 0.0,
+				duration: null,
+				ease: null,
+				type: "set"
+			};
+			parentState.loadedModifiers.push(entry);
+		}
+
+		parentState.buildTimelineRows();
+		close();
 	}
 
 	override public function close():Void
 	{
-		if (parentState != null && parentState.modifierList != null)
-			parentState.modifierList.rebuildList();
+		if (parentState != null)
+			parentState.buildTimelineRows();
 		super.close();
 	}
 
