@@ -20,7 +20,6 @@ class ModifierTimeline extends FlxGroup
 
 	public var gridSprite:FlxSprite;
 	public var cursorLine:FlxSprite;
-	public var rulerLabel:FlxText;
 
 	public var modifierBlocks:FlxTypedGroup<ModifierBlock>;
 	public var beatLabels:FlxTypedGroup<FlxText>;
@@ -52,13 +51,6 @@ class ModifierTimeline extends FlxGroup
 		cursorLine.scrollFactor.set(0, 1);
 		cursorLine.cameras = [state.camTimeline];
 		add(cursorLine);
-
-		// Ruler text (timestamp at current position)
-		rulerLabel = new FlxText(gridW - 110, 2, 100, "0:00", 14);
-		rulerLabel.setFormat(Paths.font("vcr.ttf"), 14, 0xFFCCCCCC, "right");
-		rulerLabel.scrollFactor.set(0, 0);
-		rulerLabel.cameras = [state.camTimeline];
-		add(rulerLabel);
 
 		modifierBlocks = new FlxTypedGroup<ModifierBlock>();
 		add(modifierBlocks);
@@ -143,12 +135,6 @@ class ModifierTimeline extends FlxGroup
 		// Position cursor line
 		cursorLine.x = cursorTimelineX - scrollX - cursorLine.width / 2;
 
-		// Update ruler label timestamp
-		var totalSec = Math.floor(curTime / 1000);
-		var min = Math.floor(totalSec / 60);
-		var sec = totalSec % 60;
-		rulerLabel.text = (min < 10 ? "0" : "") + min + ":" + (sec < 10 ? "0" : "") + sec;
-
 		// Draw dynamic grid lines
 		drawGrid();
 
@@ -158,7 +144,7 @@ class ModifierTimeline extends FlxGroup
 			var rowIndex = -1;
 			for (i in 0...state.loadedModifiers.length)
 			{
-				if (state.loadedModifiers[i].name == block.data.modifierRef)
+				if (state.loadedModifiers[i].modifier == block.data.modifierRef)
 				{
 					rowIndex = i;
 					break;

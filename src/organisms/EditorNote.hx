@@ -24,13 +24,16 @@ class EditorNote extends FlxSprite
 	public var speed:Float = 1;
 	public var modAngle:Float = 0;
 	public var isHoldEnd:Bool = false;
+	public var character:Int = 0;
+	public var characters:Array<Int> = [];
 
 	var ui_settings:Array<String>;
 	var mania_size:Array<String>;
 	var localKeyCount:Int;
 
 	public function new(strumTime:Float, noteData:Int, ?sustainNote:Bool = false, ?arrowType:String = "default",
-			?mustPress:Bool = false, ?ui_settings:Array<String>, ?mania_size:Array<String>, ?keyCount:Int, ?isHoldEnd:Bool = false)
+			?mustPress:Bool = false, ?ui_settings:Array<String>, ?mania_size:Array<String>, ?keyCount:Int,
+			?isHoldEnd:Bool = false, ?character:Int = 0, ?characters:Array<Int> = null)
 	{
 		super();
 
@@ -42,6 +45,8 @@ class EditorNote extends FlxSprite
 		this.mania_size = mania_size;
 		this.localKeyCount = keyCount;
 		this.isHoldEnd = isHoldEnd;
+		this.character = character;
+		this.characters = (characters != null) ? characters : [];
 
 		var song = PlayState.SONG;
 		var uiSkin:String = song != null ? (song.ui_Skin != null ? song.ui_Skin : "default") : "default";
@@ -107,18 +112,21 @@ class EditorNote extends FlxSprite
 	{
 		var strumY:Float = myStrum.y;
 		var downscroll = Options.getData("downscroll") == true;
-		var posMath:Float = 0.45 * (Conductor.songPosition - strumTime) * FlxMath.roundDecimal(speed, 2);
-
-		if (!downscroll)
-		{
-			y = strumY - posMath;
-			return;
-		}
-
-		y = strumY + posMath;
+		y = strumY;
 
 		if (isSustainNote)
-			y -= (frameHeight * scale.y) - swagWidth;
+		{
+			if (downscroll)
+				y -= (frameHeight * scale.y) - swagWidth;
+			else
+				y += (frameHeight * scale.y) - swagWidth;
+		}
+
+		var posMath:Float = 0.45 * (Conductor.songPosition - strumTime) * FlxMath.roundDecimal(speed, 2);
+		if (!downscroll)
+			y -= posMath;
+		else
+			y += posMath;
 	}
 
 	public function calculateCanBeHit():Void

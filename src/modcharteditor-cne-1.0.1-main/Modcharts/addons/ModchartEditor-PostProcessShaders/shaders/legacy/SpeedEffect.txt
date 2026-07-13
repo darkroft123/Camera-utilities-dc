@@ -1,2 +1,0 @@
-iTime 0
-effect 0

@@ -1,3 +1,0 @@
-uTime 1
-uWindowWidth 0
-uWindowHeight 0

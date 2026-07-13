@@ -1,2 +1,0 @@
-strength 1
-intensity 1

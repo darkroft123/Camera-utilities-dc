@@ -1,2 +1,0 @@
-iTime 0
-transparency 1

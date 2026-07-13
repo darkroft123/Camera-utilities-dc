@@ -129,7 +129,7 @@ class ModifyModifierPopup extends FlxSubState
 			var entry:ModifierEntry = {
 				name: rawName,
 				modifier: selectedModifier,
-				value: 0.0,
+				value: ModifierRegistry.getDefaultValue(selectedModifier),
 				duration: null,
 				ease: null,
 				type: "set"

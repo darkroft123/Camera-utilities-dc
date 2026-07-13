@@ -260,10 +260,23 @@ class PreviewCamera
 				var arrowType:String = (songNotes.length > 4 && Std.isOfType(songNotes[4], String))
 					? songNotes[4] : "default";
 
+				var noteChar:Int = 0;
+				var noteChars:Array<Int> = null;
+				if (songNotes.length > 3 && songNotes[3] != null)
+				{
+					if (Std.isOfType(songNotes[3], Array))
+					{
+						noteChars = songNotes[3];
+						noteChar = (noteChars.length > 0) ? noteChars[0] : 0;
+					}
+					else if (Std.isOfType(songNotes[3], Int)) noteChar = songNotes[3];
+					else if (Std.isOfType(songNotes[3], Float)) noteChar = Std.int(songNotes[3]);
+				}
+
 				var localKeyCount = mustPress ? playerKeyCount : keyCount;
 
 				var swagNote = new EditorNote(daStrumTime, editorNoteData, false, arrowType,
-					mustPress, ui_settings, mania_size, localKeyCount);
+					mustPress, ui_settings, mania_size, localKeyCount, false, noteChar, noteChars);
 				swagNote.sustainLength = songNotes[2];
 				swagNote.scrollFactor.set();
 				swagNote.cameras = [state.camHUD];
@@ -278,7 +291,7 @@ class PreviewCamera
 						daStrumTime + Conductor.stepCrochet * i
 						+ (Conductor.stepCrochet / FlxMath.roundDecimal(song.speed, 2)),
 						editorNoteData, true, arrowType,
-						mustPress, ui_settings, mania_size, localKeyCount, isEnd
+						mustPress, ui_settings, mania_size, localKeyCount, isEnd, noteChar, noteChars
 					);
 					sustainNote.scrollFactor.set();
 					sustainNote.speed = swagNote.speed;
@@ -336,6 +349,46 @@ class PreviewCamera
 				s.y = strumGameY - (s.height / 2);
 				// Do not overwrite local key-count scale
 			}
+	}
+
+	function playAnimOnNote(parentChar:game.Character, note:EditorNote, singAnim:String, force:Bool = true):Void
+	{
+		if (!parentChar.isCharacterGroup)
+		{
+			parentChar.playAnim(singAnim, force);
+			return;
+		}
+
+		var chars:Array<Int> = note.characters;
+		var charID:Int = note.character;
+
+		if (chars == null || chars.length <= 1)
+		{
+			if (parentChar.otherCharacters != null && charID < parentChar.otherCharacters.length)
+			{
+				var c = parentChar.otherCharacters[charID];
+				if (c != null)
+				{
+					parentChar.activeCharacterID = charID;
+					c.playAnim(singAnim, force);
+				}
+			}
+		}
+		else
+		{
+			for (i in chars)
+			{
+				if (parentChar.otherCharacters != null && i < parentChar.otherCharacters.length)
+				{
+					var c = parentChar.otherCharacters[i];
+					if (c != null)
+					{
+						parentChar.activeCharacterID = i;
+						c.playAnim(singAnim, force);
+					}
+				}
+			}
+		}
 	}
 
 	public function update(elapsed:Float):Void
@@ -471,39 +524,21 @@ class PreviewCamera
 
 			note.calculateCanBeHit();
 
-			// Auto-hit enemy notes -> character singing + strum confirm
-			if (!note.mustPress && songPos >= note.strumTime && !note.wasGoodHit)
+			// Auto-hit: mustPress determines parent character (PlayState logic)
+			if (songPos >= note.strumTime && !note.wasGoodHit)
 			{
-				var keyCount = (PlayState.SONG.keyCount != null) ? PlayState.SONG.keyCount : 4;
+				var parentChar = note.mustPress ? boyfriend : dad;
+				var keyCount = note.mustPress
+					? ((PlayState.SONG.playerKeyCount != null) ? PlayState.SONG.playerKeyCount : 4)
+					: ((PlayState.SONG.keyCount != null) ? PlayState.SONG.keyCount : 4);
 				var animIndex = Std.int(Math.abs(note.noteData)) % keyCount;
-				var singAnim:String = NoteVariables.characterAnimations[
-					keyCount - 1
-				][animIndex];
+				var singAnim:String = NoteVariables.characterAnimations[keyCount - 1][animIndex];
 
-				playCharAnim(dad, singAnim);
+				playAnimOnNote(parentChar, note, singAnim);
 
-				var spr = cast(strumLines[0][Std.int(Math.abs(note.noteData)) % enemyStrumLen], StrumNote);
-				if (spr != null)
-				{
-					spr.playAnim('confirm', true);
-					spr.resetAnim = 0.2;
-				}
-
-				note.wasGoodHit = true;
-			}
-
-			// Auto-hit player notes -> character singing + strum confirm
-			if (note.mustPress && songPos >= note.strumTime && !note.wasGoodHit)
-			{
-				var playerKeyCount = (PlayState.SONG.playerKeyCount != null) ? PlayState.SONG.playerKeyCount : 4;
-				var animIndex = Std.int(Math.abs(note.noteData)) % playerKeyCount;
-				var singAnim:String = NoteVariables.characterAnimations[
-					playerKeyCount - 1
-				][animIndex];
-
-				playCharAnim(boyfriend, singAnim);
-
-				var spr = cast(strumLines[1][Std.int(Math.abs(note.noteData)) % playerStrumLen], StrumNote);
+				var strumLine = note.mustPress ? 1 : 0;
+				var strumLen = note.mustPress ? playerStrumLen : enemyStrumLen;
+				var spr = cast(strumLines[strumLine][Std.int(Math.abs(note.noteData)) % strumLen], StrumNote);
 				if (spr != null)
 				{
 					spr.playAnim('confirm', true);
