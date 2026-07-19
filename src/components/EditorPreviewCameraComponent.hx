@@ -102,12 +102,6 @@ class EditorPreviewCameraComponent
 		addCharacter(owner, boyfriend);
 
 		stage.setCharOffsets(boyfriend, gf, dad);
-
-		dad.cameraOffset[0] += stage.p2_Cam_Offset.x;
-		dad.cameraOffset[1] += stage.p2_Cam_Offset.y;
-
-		boyfriend.cameraOffset[0] += stage.p1_Cam_Offset.x;
-		boyfriend.cameraOffset[1] += stage.p1_Cam_Offset.y;
 	}
 
 	function addCharacter(owner:ModchartFX, char:Character):Void
@@ -138,8 +132,8 @@ class EditorPreviewCameraComponent
 		if (dad == null)
 			return;
 
-		var camX:Float = dad.getMidpoint().x + 150 + dad.cameraOffset[0];
-		var camY:Float = dad.getMidpoint().y - 100 + dad.cameraOffset[1];
+		var camX:Float = dad.getMidpoint().x + 150 + dad.cameraOffset[0] + stage.p2_Cam_Offset.x;
+		var camY:Float = dad.getMidpoint().y - 100 + dad.cameraOffset[1] + stage.p2_Cam_Offset.y;
 
 		camFollow = new FlxObject(camX, camY, 1, 1);
 

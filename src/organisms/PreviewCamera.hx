@@ -40,6 +40,15 @@ class PreviewCamera
 	public var modFollowX:Float = 0.0;
 	public var modFollowY:Float = 0.0;
 
+	public var trackDad:Bool = false;
+	public var trackBf:Bool = false;
+	public var turnDad:Float = 0.0;
+	public var turnBf:Float = 0.0;
+	public var cameraFly:Float = 0.0;
+
+	public var hasTween:Bool = false;
+	public var lerpSpeed:Float = 0.04;
+
 	public var strumLines:Array<Array<FlxSprite>> = [];
 
 	public var notes:FlxTypedGroup<EditorNote>;
@@ -54,12 +63,17 @@ class PreviewCamera
 	var previewCam:FlxCamera;
 	var state:ModchartEditor;
 	var prevFullscreen:Bool = false;
+	public var targetCrosshair:FlxSprite;
 	var ui_settings:Array<String>;
 	var mania_size:Array<String>;
+	var originalScrollY:Float = 0.0;
 
-	public function new(state:ModchartEditor)
+	var currentSingOffsetX:Float = 0.0;
+	var currentSingOffsetY:Float = 0.0;
+
+	public function new(parent:ModchartEditor)
 	{
-		this.state = state;
+		this.state = parent;
 		previewCam = new FlxCamera(0, 0, FlxG.width, FlxG.height, 1);
 		previewCam.bgColor = 0;
 	}
@@ -301,6 +315,13 @@ class PreviewCamera
 			}
 		}
 
+		targetCrosshair = new FlxSprite();
+		targetCrosshair.makeGraphic(24, 24, FlxColor.TRANSPARENT, true);
+		targetCrosshair.pixels.fillRect(new flash.geom.Rectangle(11, 0, 2, 24), FlxColor.RED);
+		targetCrosshair.pixels.fillRect(new flash.geom.Rectangle(0, 11, 24, 2), FlxColor.RED);
+		targetCrosshair.cameras = [previewCam];
+		state.add(targetCrosshair);
+
 		unspawnNotes.sort(function(a, b) return FlxSort.byValues(FlxSort.ASCENDING, a.strumTime, b.strumTime));
 		loadedNotes = unspawnNotes.copy();
 	}
@@ -313,6 +334,11 @@ class PreviewCamera
 		modPosY = 0.0;
 		modFollowX = 0.0;
 		modFollowY = 0.0;
+		trackDad = false;
+		trackBf = false;
+		turnDad = 0.0;
+		turnBf = 0.0;
+		cameraFly = 0.0;
 	}
 
 	public function resetNotes():Void
@@ -441,52 +467,122 @@ class PreviewCamera
 		// Camera follow
 		updateCamera(elapsed);
 
+		if (targetCrosshair != null)
+		{
+			targetCrosshair.x = previewCam.scroll.x + previewCam.width / 2 - targetCrosshair.width / 2;
+			targetCrosshair.y = previewCam.scroll.y + previewCam.height / 2 - targetCrosshair.height / 2;
+		}
+
 		repositionStrums();
 
 		// Notes
 		updateNotes();
 	}
 
+	function getCamTarget(char:Dynamic):Dynamic {
+		var camChar:Dynamic = null;
+		try { camChar = char.getCameraCharacter(); } catch(e:Dynamic) {}
+		return (camChar != null) ? camChar : char;
+	}
+
 	function updateCamera(elapsed:Float):Void
 	{
 		var targetX:Float, targetY:Float;
 
-		if (centerCamera)
-		{
-			var midPos = boyfriend.getMainCharacter().getMidpoint();
-			midPos.x += stage.p1_Cam_Offset.x;
-			midPos.y += stage.p1_Cam_Offset.y;
-			targetX = midPos.x - 100 + boyfriend.getMainCharacter().cameraOffset[0];
-			targetY = midPos.y - 100 + boyfriend.getMainCharacter().cameraOffset[1];
-			midPos.put();
+		var dadTarget = getCamTarget(dad);
+		var bfTarget = getCamTarget(boyfriend);
 
-			midPos = dad.getMainCharacter().getMidpoint();
-			midPos.x += stage.p2_Cam_Offset.x;
-			midPos.y += stage.p2_Cam_Offset.y;
-			targetX += midPos.x + 150 + dad.getMainCharacter().cameraOffset[0];
-			targetY += midPos.y - 100 + dad.getMainCharacter().cameraOffset[1];
-			targetX *= 0.5;
-			targetY *= 0.5;
-			midPos.put();
+		var dadMid = dadTarget.getMidpoint();
+		var bfMid = bfTarget.getMidpoint();
+
+		var dadTargetX = dadMid.x + 150 + dadTarget.cameraOffset[0] + stage.p2_Cam_Offset.x;
+		var dadTargetY = dadMid.y - 100 + dadTarget.cameraOffset[1] + stage.p2_Cam_Offset.y;
+
+		var bfTargetX = bfMid.x - 100 + stage.p1_Cam_Offset.x + bfTarget.cameraOffset[0];
+		var bfTargetY = bfMid.y - 100 + stage.p1_Cam_Offset.y + bfTarget.cameraOffset[1];
+
+		var centerTargetX = (dadTargetX + bfTargetX) * 0.5;
+		var centerTargetY = (dadTargetY + bfTargetY) * 0.5;
+
+		if (turnDad > 0.5) {
+			targetX = dadTargetX;
+			targetY = dadTargetY;
+		} else if (turnBf > 0.5) {
+			targetX = bfTargetX;
+			targetY = bfTargetY;
+		} else if (centerCamera) {
+			targetX = centerTargetX;
+			targetY = centerTargetY;
+		} else {
+			targetX = bfTargetX;
+			targetY = bfTargetY;
 		}
-		else
+
+		var targetSingOffsetX = 0.0;
+		var targetSingOffsetY = 0.0;
+		var singOffset = 50.0;
+		function applyTracking(char:Dynamic):Void
 		{
-			var bfMid = boyfriend.getMainCharacter().getMidpoint();
-			targetX = bfMid.x - 100 + stage.p1_Cam_Offset.x + boyfriend.getMainCharacter().cameraOffset[0];
-			targetY = bfMid.y - 100 + stage.p1_Cam_Offset.y + boyfriend.getMainCharacter().cameraOffset[1];
-			bfMid.put();
+			var trackChar = getCamTarget(char);
+			var animName = '';
+			try { animName = trackChar.curAnimName().toLowerCase(); } catch(e:Dynamic) {
+				try { animName = trackChar.animation.curAnim.name.toLowerCase(); } catch(e2:Dynamic) {}
+			}
+			trace("PreviewCamera TrackSing -> Detected Anim: '" + animName + "'");
+			if (animName.indexOf('singleft') != -1) targetSingOffsetX -= singOffset;
+			else if (animName.indexOf('singright') != -1) targetSingOffsetX += singOffset;
+			else if (animName.indexOf('singup') != -1) targetSingOffsetY -= singOffset;
+			else if (animName.indexOf('singdown') != -1) targetSingOffsetY += singOffset;
+		}
+		if (trackDad) {
+			trace("PreviewCamera -> trackDad is true! Applying tracking...");
+			applyTracking(dad);
+		}
+		if (trackBf) {
+			trace("PreviewCamera -> trackBf is true! Applying tracking...");
+			applyTracking(boyfriend);
 		}
 
-		var lerpVal:Float = 0.04 * FlxG.elapsed * 60;
-		if (lerpVal > 1) lerpVal = 1;
+		if (cameraFly > 0) {
+			var time = Conductor.songPosition / 1000.0;
+			targetX += Math.sin(time * 2) * 50 * cameraFly;
+			targetY += Math.sin(time * 4) * 25 * cameraFly;
+		}
 
-		previewCam.scroll.x = FlxMath.lerp(previewCam.scroll.x, targetX - FlxG.width * 0.5, lerpVal);
-		previewCam.scroll.y = FlxMath.lerp(previewCam.scroll.y, targetY - FlxG.height * 0.5, lerpVal);
+		targetX += modPosX + modFollowX;
+		targetY += modPosY + modFollowY;
 
-		previewCam.zoom = (stage != null ? stage.camZoom : 1.0) * modZoom;
+		var targetZoom = (stage != null ? stage.camZoom : 1.0) * modZoom;
+		if (hasTween) {
+			previewCam.zoom = targetZoom;
+		} else {
+			var lerpVal:Float = lerpSpeed * FlxG.elapsed * 60;
+			if (lerpVal > 1) lerpVal = 1;
+			previewCam.zoom = FlxMath.lerp(previewCam.zoom, targetZoom, lerpVal);
+		}
+		
+		var singLerpVal = 0.15 * (FlxG.elapsed / (1 / 60));
+		if (singLerpVal > 1) singLerpVal = 1;
+		currentSingOffsetX = FlxMath.lerp(currentSingOffsetX, targetSingOffsetX, singLerpVal);
+		currentSingOffsetY = FlxMath.lerp(currentSingOffsetY, targetSingOffsetY, singLerpVal);
+		
+		var finalTargetX = (targetX - FlxG.width * 0.5) + currentSingOffsetX;
+		var finalTargetY = (targetY - FlxG.height * 0.5) + currentSingOffsetY;
+
+		if (hasTween) {
+			previewCam.scroll.x = finalTargetX;
+			previewCam.scroll.y = finalTargetY;
+		} else {
+			var lerpVal:Float = lerpSpeed * FlxG.elapsed * 60;
+			if (lerpVal > 1) lerpVal = 1;
+			previewCam.scroll.x = FlxMath.lerp(previewCam.scroll.x, finalTargetX, lerpVal);
+			previewCam.scroll.y = FlxMath.lerp(previewCam.scroll.y, finalTargetY, lerpVal);
+		}
+
 		previewCam.angle = modAngle;
-		previewCam.scroll.x += modPosX + modFollowX;
-		previewCam.scroll.y += modPosY + modFollowY;
+
+		dadMid.put();
+		bfMid.put();
 	}
 
 	function updateNotes():Void

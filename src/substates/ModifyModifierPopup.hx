@@ -26,6 +26,7 @@ class ModifyModifierPopup extends FlxSubState
 
 	var nameInput:FlxUIInputText;
 	var modifierDropdown:FlxUIDropDownMenu;
+	var descText:FlxText;
 
 	var createBtn:FlxUIButton;
 	var closeBtn:FlxUIButton;
@@ -91,11 +92,19 @@ class ModifyModifierPopup extends FlxSubState
 		var modLabels = FlxUIDropDownMenu.makeStrIdLabelArray(modOptions);
 		modifierDropdown = new FlxUIDropDownMenu(col2x, yOff + 38, modLabels, function(selectedId:String) {
 			selectedModifier = selectedId;
+			if (descText != null) descText.text = getModifierDescription(selectedId);
 		});
 		modifierDropdown.selectedLabel = selectedModifier;
 		modifierDropdown.scrollFactor.set(0, 0);
 		modifierDropdown.cameras = [cam];
 		add(modifierDropdown);
+
+		descText = new FlxText(px + 20, yOff + 75, POPUP_W - 40, getModifierDescription(selectedModifier), 10);
+		descText.alignment = "center";
+		descText.color = 0xFFAAAAAA;
+		descText.scrollFactor.set(0, 0);
+		descText.cameras = [cam];
+		add(descText);
 
 		createBtn = new FlxUIButton(px + 20, py + POPUP_H - 50, "Create", createModifier);
 		createBtn.scrollFactor.set(0, 0);
@@ -139,6 +148,27 @@ class ModifyModifierPopup extends FlxSubState
 
 		parentState.buildTimelineRows();
 		close();
+	}
+
+	function getModifierDescription(modId:String):String
+	{
+		return switch (modId)
+		{
+			case "cameraZoom": "Zooms the camera in or out (1.0 is default).";
+			case "cameraBump": "Adds a temporary zoom bump to the camera (0.0 is default).";
+			case "cameracenter": "Centers the camera between Dad and BF (1 to enable).";
+			case "turnDad": "Forces the camera to focus on Dad (1 to enable).";
+			case "turnBf": "Forces the camera to focus on BF (1 to enable).";
+			case "trackSingDirections_dad": "Camera pans slightly when Dad sings (1 to enable).";
+			case "trackSingDirections_bf": "Camera pans slightly when BF sings (1 to enable).";
+			case "cameraFly": "Camera floats in an infinity loop shape. Higher values increase intensity.";
+			case "cameraAngle": "Tilts the camera (0 is default).";
+			case "cameraPosX": "Offsets the camera horizontally in pixels.";
+			case "cameraPosY": "Offsets the camera vertically in pixels.";
+			case "cameraFollowX": "Additional X offset for camera follow.";
+			case "cameraFollowY": "Additional Y offset for camera follow.";
+			default: "No description available.";
+		};
 	}
 
 	override public function close():Void

@@ -45,6 +45,7 @@ class SongInfoDisplay
 			+ '\nCurDecBeat: ' + FlxMath.roundDecimal(owner.curDecBeat, 2)
 			+ '\nSnap: ' + owner.beatSnap
 			+ '\nSection: ' + owner.curSection
-			+ '\nBPM: ' + Conductor.bpm;
+			+ '\nBPM: ' + Conductor.bpm
+			+ '\nAutoSave: ' + owner.autoSaveEnabled;
 	}
 }

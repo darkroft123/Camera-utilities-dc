@@ -164,6 +164,7 @@ class ModifierTimeline extends FlxGroup
 
 			var durationBeats = (block.data.duration != null && block.data.duration > 0) ? block.data.duration : 1;
 			var blockW = durationBeats * zoomX;
+			if (block.data.type == "set") blockW = Math.max(4, zoomX * 0.25);
 			var blockH = EditorLayout.ROW_SIZE_Y - 2;
 
 			block.x = blockX;
@@ -186,7 +187,8 @@ class ModifierTimeline extends FlxGroup
 				pixels.fillRect(bgRect, bgColor);
 
 				// 2. Draw border
-				var borderColor = block.isSelected ? 0xFFFFFF00 : (block.data.type == "tween" ? 0xFF00AAFF : 0xFFAA00FF);
+				var baseColor = ModchartEditor.getColorForModifier(block.data.modifierRef);
+				var borderColor = block.isSelected ? 0xFFFFFF00 : baseColor;
 				
 				// Top & Bottom borders
 				var topRect = new openfl.geom.Rectangle(0, 0, blockW_int, 1);
@@ -208,8 +210,9 @@ class ModifierTimeline extends FlxGroup
 					for (x in 0...blockW_int)
 					{
 						var t = x / (blockW_int - 1);
-						if (blockW_int == 1) t = 0;
+						if (blockW_int <= 1) t = 0;
 						var val = easeFunc(t);
+						
 						// Clamp and map to block height
 						var yVal = Std.int(FlxMath.bound((1.0 - val) * (blockH_int - 4) + 2, 1, blockH_int - 2));
 
@@ -251,10 +254,11 @@ class ModifierTimeline extends FlxGroup
 				block.bg.dirty = true;
 			}
 
-			block.label.text = block.data.modifierRef + " (" + block.data.value + ")";
+			var modName = state.loadedModifiers[rowIndex].name;
+			block.label.text = modName + " (" + block.data.value + ")";
 			block.label.fieldWidth = blockW;
-			block.label.x = 4;
-			block.label.y = 2;
+			block.label.x = block.x + 4;
+			block.label.y = block.y + 2;
 			block.label.borderStyle = OUTLINE;
 			block.label.borderColor = 0xFF000000;
 			block.label.borderSize = 1;
@@ -263,10 +267,17 @@ class ModifierTimeline extends FlxGroup
 
 	public function loadPlacements():Void
 	{
+		modifierBlocks.forEach(function(block:ModifierBlock) { 
+			if (block != null) block.destroy(); 
+		});
 		modifierBlocks.clear();
-		for (pl in state.timelinePlacements)
+		for (pl in state.unrolledPlacements)
 		{
 			var block = new ModifierBlock(this, pl);
+			if (state.timelinePlacements.indexOf(pl) == -1) {
+				block.bg.alpha = 0.5;
+				block.label.alpha = 0.5;
+			}
 			block.cameras = [state.camTimeline];
 			modifierBlocks.add(block);
 		}

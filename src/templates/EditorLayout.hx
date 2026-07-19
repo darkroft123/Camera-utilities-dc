@@ -8,9 +8,9 @@ class EditorLayout
 	public static inline var TIMELINE_HEIGHT:Int = 320;
 	public static inline var ROW_SIZE_X:Float = 20.0;
 	public static inline var ROW_SIZE_Y:Float = 20.0;
-	public static inline var LIST_COL_W:Int = 200;
-	public static inline var VALUES_COL_W:Int = 56;
-	public static inline var EDIT_COL_W:Int = 256;
+	public static inline var LIST_COL_W:Int = 192;
+	public static inline var VALUES_COL_W:Int = 0;
+	public static inline var EDIT_COL_W:Int = 320;
 	public static inline var SEP_W:Int = 2;
 	public static var GRID_COL_X(get, never):Float;
 	static function get_GRID_COL_X():Float return LIST_COL_W + VALUES_COL_W + EDIT_COL_W + (SEP_W * 3);
