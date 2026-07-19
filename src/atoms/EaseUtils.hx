@@ -31,6 +31,18 @@ class EaseUtils
 			case "bouncein": flixel.tweens.FlxEase.bounceIn;
 			case "bounceout": flixel.tweens.FlxEase.bounceOut;
 			case "bounceinout": flixel.tweens.FlxEase.bounceInOut;
+			case "circin": flixel.tweens.FlxEase.circIn;
+			case "circout": flixel.tweens.FlxEase.circOut;
+			case "circinout": flixel.tweens.FlxEase.circInOut;
+			case "elasticin": flixel.tweens.FlxEase.elasticIn;
+			case "elasticout": flixel.tweens.FlxEase.elasticOut;
+			case "elasticinout": flixel.tweens.FlxEase.elasticInOut;
+			case "smoothstepin": flixel.tweens.FlxEase.smoothStepIn;
+			case "smoothstepout": flixel.tweens.FlxEase.smoothStepOut;
+			case "smoothstepinout": flixel.tweens.FlxEase.smoothStepInOut;
+			case "smootherstepin": flixel.tweens.FlxEase.smootherStepIn;
+			case "smootherstepout": flixel.tweens.FlxEase.smootherStepOut;
+			case "smootherstepinout": flixel.tweens.FlxEase.smootherStepInOut;
 			case "classic": function(t:Float) return 1 - Math.pow(1 - 0.04, t * 60);
 			default: flixel.tweens.FlxEase.linear;
 		}
@@ -41,6 +53,8 @@ class EaseUtils
 		"quartOut", "quartIn", "quartInOut", "quintOut", "quintIn", "quintInOut",
 		"sineOut", "sineIn", "sineInOut", "expoOut", "expoIn", "expoInOut",
 		"backOut", "backIn", "backInOut", "bounceOut", "bounceIn", "bounceInOut",
+		"circOut", "circIn", "circInOut", "elasticOut", "elasticIn", "elasticInOut",
+		"smoothStepOut", "smoothStepIn", "smoothStepInOut", "smootherStepOut", "smootherStepIn", "smootherStepInOut",
 		"classic"
 	];
 }

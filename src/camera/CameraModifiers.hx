@@ -13,7 +13,16 @@ class CameraModifiers
 		});
 
 		ModifierRegistry.register("cameraBump", "Camera Bump", 0.0, function(value:Float, state:ModchartEditor) {
-			if (state.editorPreview != null) state.editorPreview.modZoom += value;
+			if (state.editorPreview != null) state.editorPreview.modBump = value;
+		});
+		ModifierRegistry.register("cameraBumpX", "Camera Bump X", 0.0, function(value:Float, state:ModchartEditor) {
+			if (state.editorPreview != null) state.editorPreview.modBumpX = value;
+		});
+		ModifierRegistry.register("cameraBumpY", "Camera Bump Y", 0.0, function(value:Float, state:ModchartEditor) {
+			if (state.editorPreview != null) state.editorPreview.modBumpY = value;
+		});
+		ModifierRegistry.register("cameraBumpAngle", "Camera Bump Angle", 0.0, function(value:Float, state:ModchartEditor) {
+			if (state.editorPreview != null) state.editorPreview.modBumpAngle = value;
 		});
 		ModifierRegistry.register("cameracenter", "Camera Center", 1.0, function(value:Float, state:ModchartEditor) {
 			if (state.editorPreview != null) state.editorPreview.centerCamera = (value >= 0.5);
@@ -56,14 +65,6 @@ class CameraModifiers
 
 		ModifierRegistry.register("cameraPosY", "Camera Position Y", 0.0, function(value:Float, state:ModchartEditor) {
 			if (state.editorPreview != null) state.editorPreview.modPosY = value;
-		});
-
-		ModifierRegistry.register("cameraFollowX", "Camera Follow X", 0.0, function(value:Float, state:ModchartEditor) {
-			if (state.editorPreview != null) state.editorPreview.modFollowX = value;
-		});
-
-		ModifierRegistry.register("cameraFollowY", "Camera Follow Y", 0.0, function(value:Float, state:ModchartEditor) {
-			if (state.editorPreview != null) state.editorPreview.modFollowY = value;
 		});
 	}
 }

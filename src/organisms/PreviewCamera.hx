@@ -37,14 +37,25 @@ class PreviewCamera
 	public var modAngle:Float = 0.0;
 	public var modPosX:Float = 0.0;
 	public var modPosY:Float = 0.0;
-	public var modFollowX:Float = 0.0;
-	public var modFollowY:Float = 0.0;
+
 
 	public var trackDad:Bool = false;
 	public var trackBf:Bool = false;
 	public var turnDad:Float = 0.0;
 	public var turnBf:Float = 0.0;
 	public var cameraFly:Float = 0.0;
+	public var modBump:Float = 0.0;
+	public var modBumpX:Float = 0.0;
+	public var modBumpY:Float = 0.0;
+	public var modBumpAngle:Float = 0.0;
+	var lastBumpValue:Float = 0.0;
+	var lastBumpXValue:Float = 0.0;
+	var lastBumpYValue:Float = 0.0;
+	var lastBumpAngleValue:Float = 0.0;
+	var lastOffsetX:Float = 0;
+	var lastOffsetY:Float = 0;
+	var lastExtraZoom:Float = 0;
+	var lastExtraAngle:Float = 0;
 
 	public var hasTween:Bool = false;
 	public var lerpSpeed:Float = 0.04;
@@ -156,8 +167,8 @@ class PreviewCamera
 		// Strums on camHUD
 		strumLines = [];
 		curScale = state.isPreviewFullscreen ? 1.0 : 0.5;
-		var camY = ((-FlxG.height / 4) + 32) * (-((curScale - 0.5) * 2) + 1);
-		var strumScreenY:Float = Options.getData("downscroll") == true ? FlxG.height - 100 : 100;
+		var camY = ((-720 / 4) + 32) * (-((curScale - 0.5) * 2) + 1);
+		var strumScreenY:Float = Options.getData("downscroll") == true ? 720 - 100 : 100;
 		var strumGameY:Float = (strumScreenY - camY) / curScale;
 		var playerKeyCount:Int = (PlayState.SONG.playerKeyCount != null) ? PlayState.SONG.playerKeyCount : 4;
 		var enemyKeyCount:Int = (PlayState.SONG.keyCount != null) ? PlayState.SONG.keyCount : 4;
@@ -201,7 +212,7 @@ class PreviewCamera
 
 		// Initialize camHUD transforms so notes/strums are visible from frame 1
 		var initCurScale = state.isPreviewFullscreen ? 1.0 : 0.5;
-		var initCamY = ((-FlxG.height / 4) + 32) * (-((initCurScale - 0.5) * 2) + 1);
+		var initCamY = ((-720 / 4) + 32) * (-((initCurScale - 0.5) * 2) + 1);
 		
 		previewCam.flashSprite.scaleX = previewCam.flashSprite.scaleY = initCurScale;
 		if (state.camHUD != null)
@@ -210,7 +221,7 @@ class PreviewCamera
 			state.camHUD.y = initCamY;
 		}
 		
-		var initStrumScreenY:Float = Options.getData("downscroll") == true ? FlxG.height - 100 : 100;
+		var initStrumScreenY:Float = Options.getData("downscroll") == true ? 720 - 100 : 100;
 		var initStrumGameY:Float = (initStrumScreenY - initCamY) / initCurScale;
 		if (state.camHUD != null)
 		{
@@ -228,7 +239,7 @@ class PreviewCamera
 		var focusX = boyfriend.getMidpoint().x + boyfriend.cameraOffset[0];
 		var focusY = boyfriend.getMidpoint().y + boyfriend.cameraOffset[1];
 		previewCam.scroll.x = focusX - FlxG.width * 0.5;
-		previewCam.scroll.y = focusY - FlxG.height * 0.5;
+		previewCam.scroll.y = focusY - 720 * 0.5;
 		previewCam.zoom = stage.camZoom != 0 ? stage.camZoom : 1.0;
 
 		// Reposition strums to align correctly from startup
@@ -332,8 +343,7 @@ class PreviewCamera
 		modAngle = 0.0;
 		modPosX = 0.0;
 		modPosY = 0.0;
-		modFollowX = 0.0;
-		modFollowY = 0.0;
+		modPosY = 0.0;
 		trackDad = false;
 		trackBf = false;
 		turnDad = 0.0;
@@ -365,9 +375,9 @@ class PreviewCamera
 
 	public function repositionStrums():Void
 	{
-		var camY = ((-FlxG.height / 4) + 32) * (-((curScale - 0.5) * 2) + 1);
-		var strumScreenY:Float = Options.getData("downscroll") == true ? FlxG.height - 100 : 100;
-		var centerY = FlxG.height / 2;
+		var camY = ((-720 / 4) + 32) * (-((curScale - 0.5) * 2) + 1);
+		var strumScreenY:Float = Options.getData("downscroll") == true ? 720 - 100 : 100;
+		var centerY = 720 / 2;
 		var strumGameY:Float = centerY + (strumScreenY - camY - centerY) / curScale;
 		for (line in strumLines)
 			for (s in line)
@@ -453,13 +463,13 @@ class PreviewCamera
 		}
 
 		// CNE-style Y-offset
-		var camY = ((-FlxG.height / 4) + 32) * (-((curScale - 0.5) * 2) + 1);
+		var camY = ((-720 / 4) + 32) * (-((curScale - 0.5) * 2) + 1);
 		previewCam.y = camY;
 		if (state.camHUD != null)
 		{
 			state.camHUD.y = camY;
-			var strumScreenY:Float = Options.getData("downscroll") == true ? FlxG.height - 100 : 100;
-			var centerY = FlxG.height / 2;
+			var strumScreenY:Float = Options.getData("downscroll") == true ? 720 - 100 : 100;
+			var centerY = 720 / 2;
 			var strumGameY:Float = centerY + (strumScreenY - camY - centerY) / curScale;
 			state.camHUD.scroll.y = strumGameY - strumScreenY;
 		}
@@ -528,18 +538,15 @@ class PreviewCamera
 			try { animName = trackChar.curAnimName().toLowerCase(); } catch(e:Dynamic) {
 				try { animName = trackChar.animation.curAnim.name.toLowerCase(); } catch(e2:Dynamic) {}
 			}
-			trace("PreviewCamera TrackSing -> Detected Anim: '" + animName + "'");
 			if (animName.indexOf('singleft') != -1) targetSingOffsetX -= singOffset;
 			else if (animName.indexOf('singright') != -1) targetSingOffsetX += singOffset;
 			else if (animName.indexOf('singup') != -1) targetSingOffsetY -= singOffset;
 			else if (animName.indexOf('singdown') != -1) targetSingOffsetY += singOffset;
 		}
 		if (trackDad) {
-			trace("PreviewCamera -> trackDad is true! Applying tracking...");
 			applyTracking(dad);
 		}
 		if (trackBf) {
-			trace("PreviewCamera -> trackBf is true! Applying tracking...");
 			applyTracking(boyfriend);
 		}
 
@@ -549,40 +556,57 @@ class PreviewCamera
 			targetY += Math.sin(time * 4) * 25 * cameraFly;
 		}
 
-		targetX += modPosX + modFollowX;
-		targetY += modPosY + modFollowY;
-
-		var targetZoom = (stage != null ? stage.camZoom : 1.0) * modZoom;
-		if (hasTween) {
-			previewCam.zoom = targetZoom;
-		} else {
-			var lerpVal:Float = lerpSpeed * FlxG.elapsed * 60;
-			if (lerpVal > 1) lerpVal = 1;
-			previewCam.zoom = FlxMath.lerp(previewCam.zoom, targetZoom, lerpVal);
-		}
-		
 		var singLerpVal = 0.15 * (FlxG.elapsed / (1 / 60));
 		if (singLerpVal > 1) singLerpVal = 1;
 		currentSingOffsetX = FlxMath.lerp(currentSingOffsetX, targetSingOffsetX, singLerpVal);
 		currentSingOffsetY = FlxMath.lerp(currentSingOffsetY, targetSingOffsetY, singLerpVal);
 		
-		var finalTargetX = (targetX - FlxG.width * 0.5) + currentSingOffsetX;
-		var finalTargetY = (targetY - FlxG.height * 0.5) + currentSingOffsetY;
+		var desiredScrollX = (targetX - 1280 * 0.5) + currentSingOffsetX;
+		var finalTargetY = (targetY - 720 * 0.5) + currentSingOffsetY;
 
-		if (hasTween) {
-			previewCam.scroll.x = finalTargetX;
-			previewCam.scroll.y = finalTargetY;
-		} else {
-			var lerpVal:Float = lerpSpeed * FlxG.elapsed * 60;
-			if (lerpVal > 1) lerpVal = 1;
-			previewCam.scroll.x = FlxMath.lerp(previewCam.scroll.x, finalTargetX, lerpVal);
-			previewCam.scroll.y = FlxMath.lerp(previewCam.scroll.y, finalTargetY, lerpVal);
-		}
+		// Recover base scroll
+		var baseScrollX = previewCam.scroll.x - lastOffsetX;
+		var baseScrollY = previewCam.scroll.y - lastOffsetY;
 
-		previewCam.angle = modAngle;
+		var lerpVal:Float = lerpSpeed * FlxG.elapsed * 60;
+		if (lerpVal > 1) lerpVal = 1;
+		
+		var currentOffsetX = modPosX + modBumpX;
+		var currentOffsetY = modPosY + modBumpY;
+
+		previewCam.scroll.x = FlxMath.lerp(baseScrollX, desiredScrollX, lerpVal) + currentOffsetX;
+		previewCam.scroll.y = FlxMath.lerp(baseScrollY, finalTargetY, lerpVal) + currentOffsetY;
+		
+		lastOffsetX = currentOffsetX;
+		lastOffsetY = currentOffsetY;
+
+		var defaultZoom = stage != null ? stage.camZoom : 1.0;
+		var targetZoomBase = defaultZoom;
+		var currentExtraZoom = (modZoom - 1.0) * defaultZoom + modBump;
+		var baseZoom = previewCam.zoom - lastExtraZoom;
+		
+		previewCam.zoom = FlxMath.lerp(baseZoom, targetZoomBase, (FlxG.elapsed * 3) * lerpSpeed) + currentExtraZoom;
+		lastExtraZoom = currentExtraZoom;
+
+		var currentExtraAngle = modAngle + modBumpAngle;
+		var baseAngle = previewCam.angle - lastExtraAngle;
+		
+		previewCam.angle = FlxMath.lerp(baseAngle, 0, (FlxG.elapsed * 3) * lerpSpeed) + currentExtraAngle;
+		lastExtraAngle = currentExtraAngle;
 
 		dadMid.put();
 		bfMid.put();
+		
+		var chars = [dad, boyfriend, gf];
+		for (char in chars) {
+			if (char != null && char.animation.curAnim != null && char.animation.curAnim.name.startsWith('sing')) {
+				char.holdTimer += FlxG.elapsed;
+				if (char.holdTimer >= Conductor.stepCrochet * 0.004) {
+					char.dance();
+					char.holdTimer = 0;
+				}
+			}
+		}
 	}
 
 	function updateNotes():Void
@@ -595,7 +619,8 @@ class PreviewCamera
 		while (unspawnNotes.length > 0 && unspawnNotes[0].strumTime - songPos < 1500)
 		{
 			var note = unspawnNotes.shift();
-			notes.add(note);
+			if (note.isSustainNote) notes.insert(0, note);
+			else notes.add(note);
 		}
 
 		notes.forEachAlive(function(note:EditorNote)
@@ -644,30 +669,45 @@ class PreviewCamera
 				note.wasGoodHit = true;
 			}
 
-			// Kill/remove notes that have been hit and passed the strumline (safely using note.kill() to avoid group mutation crash)
-			var killTime = note.strumTime + (note.isSustainNote ? Conductor.stepCrochet : 0);
-			if (songPos >= killTime)
+			if (note.isSustainNote && songPos >= note.strumTime)
 			{
-				note.kill();
-				return;
+				var downscroll = Options.getData("downscroll") == true;
+				var clipHeight = note.frameHeight * (1 - ((songPos - note.strumTime) / Conductor.stepCrochet));
+				if (clipHeight > 0 && note.frameHeight > 0 && note.frameWidth > 0)
+				{
+					if (downscroll) note.clipRect = new flixel.math.FlxRect(0, note.frameHeight - clipHeight, note.frameWidth, clipHeight);
+					else note.clipRect = new flixel.math.FlxRect(0, 0, note.frameWidth, clipHeight);
+				}
+				else
+				{
+					note.kill();
+					return;
+				}
+			}
+			else
+			{
+				var killTime = note.strumTime + (note.isSustainNote ? Conductor.stepCrochet : 0);
+				if (songPos >= killTime)
+				{
+					note.kill();
+					return;
+				}
 			}
 
-			// Player notes: mirror strum visual state
-			if (note.mustPress)
+			// Mirror strum visual state for all notes
+			if (coolStrum != null)
 			{
-				var spr = cast(strumLines[1][Std.int(Math.abs(note.noteData)) % playerStrumLen], StrumNote);
-				if (spr != null)
-				{
-					note.visible = spr.visible;
-					if (spr.alpha != 1)
-						note.alpha = note.isSustainNote ? 0.6 * spr.alpha : spr.alpha;
-					if (!note.isSustainNote)
-						note.modAngle = spr.angle;
-					note.flipX = spr.flipX;
-					if (!note.isSustainNote)
-						note.flipY = spr.flipY;
-					note.color = spr.color;
-				}
+				note.visible = coolStrum.visible;
+				if (coolStrum.alpha != 1)
+					note.alpha = note.isSustainNote ? 0.6 * coolStrum.alpha : coolStrum.alpha;
+				if (!note.isSustainNote)
+					note.modAngle = coolStrum.angle;
+				note.flipX = coolStrum.flipX;
+				if (!note.isSustainNote)
+					note.flipY = coolStrum.flipY;
+				else
+					note.flipY = Options.getData("downscroll") == true;
+				note.color = coolStrum.color;
 			}
 		});
 	}

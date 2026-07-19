@@ -4,11 +4,12 @@ class CameraEventData
 {
 	public var camZoom:Float = 1.0;
 	public var cameraBump:Float = 0.0;
+	public var cameraBumpX:Float = 0.0;
+	public var cameraBumpY:Float = 0.0;
+	public var cameraBumpAngle:Float = 0.0;
 	public var camAngle:Float = 0.0;
 	public var camPosX:Float = 0.0;
 	public var camPosY:Float = 0.0;
-	public var camFollowX:Float = 0.0;
-	public var camFollowY:Float = 0.0;
 	public var turnDad:Float = 0.0;
 	public var turnBf:Float = 0.0;
 	public var camCenter:Float = 0.0;

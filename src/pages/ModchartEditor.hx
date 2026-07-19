@@ -46,7 +46,7 @@ class ModchartEditor extends MusicBeatState
 {
 	public static var instance:ModchartEditor;
 	public var hasUnsavedChanges:Bool = false;
-	public var autoSaveEnabled:Bool = true;
+	public var autoSaveEnabled:Bool = false;
 	var autoSaveTimer:Float = 0;
 
 	public static function getColorForModifier(modName:String):FlxColor
@@ -119,7 +119,7 @@ class ModchartEditor extends MusicBeatState
 	public var saveEditBtn:flixel.addons.ui.FlxUIButton;
 	public var deleteEditBtn:flixel.addons.ui.FlxUIButton;
 	public var editTypeDropdown:flixel.addons.ui.FlxUIDropDownMenu;
-	public var editEaseDropdown:flixel.addons.ui.FlxUIDropDownMenu;
+	public var editEaseDropdown:ui.FlxScrollableDropDownMenu;
 	public var editSongModDropdown:flixel.addons.ui.FlxUIDropDownMenu;
 	public var editSongModLabel:FlxText;
 	public var editEventNameInput:flixel.addons.ui.FlxUIInputText;
@@ -341,15 +341,14 @@ class ModchartEditor extends MusicBeatState
 		editEaseLabel.cameras = [eCam]; add(editEaseLabel);
 		editEventNameLabel = new FlxText(editPanelOffsetX, eScreenY + editPanelOffsetY_Base + 150, 60, "Event:", 12);
 		editEventNameLabel.scrollFactor.set(0, 0);
-		editEventNameLabel.cameras = [camTimelineEdit];
+		editEventNameLabel.cameras = [eCam];
 		add(editEventNameLabel);
 
 		editEventNameInput = new flixel.addons.ui.FlxUIInputText(editPanelOffsetX + 65, eScreenY + editPanelOffsetY_Base + 150, 80, "cameracenter", 12, FlxColor.WHITE, FlxColor.fromRGB(30, 30, 40));
 		editEventNameInput.scrollFactor.set(0, 0);
-		editEventNameInput.cameras = [camTimelineEdit];
+		editEventNameInput.cameras = [eCam];
 		add(editEventNameInput);
 
-		var eCam = camEditor;
 
 		var rx1 = editPanelOffsetX + 220;
 		editRepeatCheckbox = new flixel.addons.ui.FlxUICheckBox(rx1, eScreenY + editPanelOffsetY_Base, null, null, "Repeat", 60);
@@ -368,8 +367,8 @@ class ModchartEditor extends MusicBeatState
 				selectedPlacement.repeat = null;
 			}
 			hasUnsavedChanges = true;
-			if (modifierTimeline != null) modifierTimeline.loadPlacements();
 			refreshUnrolledPlacements();
+			if (modifierTimeline != null) modifierTimeline.loadPlacements();
 		};
 
 		var rx3 = editPanelOffsetX + 220;
@@ -387,9 +386,8 @@ class ModchartEditor extends MusicBeatState
 			var rc = Std.parseInt(text);
 			if (rc == null || Math.isNaN(rc)) rc = 1;
 			selectedPlacement.repeat[1] = rc;
-			hasUnsavedChanges = true;
-			if (modifierTimeline != null) modifierTimeline.loadPlacements();
 			refreshUnrolledPlacements();
+			if (modifierTimeline != null) modifierTimeline.loadPlacements();
 		};
 
 		var rx5 = editPanelOffsetX + 220;
@@ -407,9 +405,8 @@ class ModchartEditor extends MusicBeatState
 			var rg = Std.parseFloat(text);
 			if (Math.isNaN(rg)) rg = 1.0;
 			selectedPlacement.repeat[2] = rg;
-			hasUnsavedChanges = true;
-			if (modifierTimeline != null) modifierTimeline.loadPlacements();
 			refreshUnrolledPlacements();
+			if (modifierTimeline != null) modifierTimeline.loadPlacements();
 		};
 
 		saveEditBtn = new flixel.addons.ui.FlxUIButton(editPanelOffsetX, eScreenY + editPanelOffsetY_Base + 180, "Save", function() {
@@ -431,9 +428,8 @@ class ModchartEditor extends MusicBeatState
 					selectedPlacement.repeat = null;
 				}
 
-				hasUnsavedChanges = true;
-				if (modifierTimeline != null) modifierTimeline.loadPlacements();
 				refreshUnrolledPlacements();
+				if (modifierTimeline != null) modifierTimeline.loadPlacements();
 			} else if (activeModifierType == "songStart") {
 				var parsedDur = Std.parseFloat(editDurationInput.text);
 				songStartPlacement = {
@@ -471,10 +467,11 @@ class ModchartEditor extends MusicBeatState
 		if (songModOptions.length == 0) songModOptions = ["cameraZoom"];
 		editSongModDropdown = new flixel.addons.ui.FlxUIDropDownMenu(editPanelOffsetX + 65, eScreenY + editPanelOffsetY_Base + 120, flixel.addons.ui.FlxUIDropDownMenu.makeStrIdLabelArray(songModOptions), function(id:String) {});
 		editSongModDropdown.selectedLabel = "cameracenter";
+		editSongModDropdown.dropDirection = flixel.addons.ui.FlxUIDropDownMenu.FlxUIDropDownMenuDropDirection.Up;
 		editSongModDropdown.scrollFactor.set();
 		editSongModDropdown.cameras = [eCam]; add(editSongModDropdown);
 
-		editEaseDropdown = new flixel.addons.ui.FlxUIDropDownMenu(editPanelOffsetX + 65, eScreenY + editPanelOffsetY_Base + 90, flixel.addons.ui.FlxUIDropDownMenu.makeStrIdLabelArray(atoms.EaseUtils.list), function(id:String) {
+		editEaseDropdown = new ui.FlxScrollableDropDownMenu(editPanelOffsetX + 65, eScreenY + editPanelOffsetY_Base + 90, ui.FlxScrollableDropDownMenu.makeStrIdLabelArray(atoms.EaseUtils.list), function(id:String) {
 			if (editEaseTextInput != null) editEaseTextInput.text = id;
 			if (selectedPlacement != null) {
 				selectedPlacement.ease = id;
@@ -485,8 +482,9 @@ class ModchartEditor extends MusicBeatState
 				hasUnsavedChanges = true;
 			}
 		});
+		editEaseDropdown.dropDirection = flixel.addons.ui.FlxUIDropDownMenu.FlxUIDropDownMenuDropDirection.Up;
 		editEaseDropdown.scrollFactor.set();
-		
+		editEaseDropdown.cameras = [eCam]; add(editEaseDropdown);
 
 		editTypeDropdown = new flixel.addons.ui.FlxUIDropDownMenu(editPanelOffsetX + 65, eScreenY + editPanelOffsetY_Base + 60, flixel.addons.ui.FlxUIDropDownMenu.makeStrIdLabelArray(["tween", "set"]), function(id:String) {
 			if (selectedPlacement != null) {
@@ -496,6 +494,7 @@ class ModchartEditor extends MusicBeatState
 			}
 			setEditionUIVisible(true);
 		});
+		editTypeDropdown.dropDirection = flixel.addons.ui.FlxUIDropDownMenu.FlxUIDropDownMenuDropDirection.Down;
 		editTypeDropdown.scrollFactor.set();
 		editTypeDropdown.cameras = [eCam]; add(editTypeDropdown);
 
@@ -594,7 +593,7 @@ class ModchartEditor extends MusicBeatState
 
 		// --- Top menu bar ---
 		menus = [
-			{name:"File", items:["Save","Save As","Import Events","Auto Save (ON)","Exit"]},
+			{name:"File", items:["Save","Save As","Import Events","Auto Save (OFF)","Exit"]},
 			{name:"Edit", items:["Copy","Paste","Cut","Delete","Shift Selection Left","Shift Selection Right"]},
 			{name:"Modchart", items:["Create Modifier"]},
 			{name:"View", items:["Fullscreen","Swap Scroll"]},
@@ -630,11 +629,12 @@ class ModchartEditor extends MusicBeatState
 			value: 0,
 			type: "set"
 		});
-		modifierTimeline.loadPlacements();
 		refreshUnrolledPlacements();
+		modifierTimeline.loadPlacements();
 		buildTimelineRows();
 
 		// Ensure dropdowns are rendered on top of other UI elements
+		// Ensure dropdowns are rendered on top of other UI elements in the correct order
 		if (editSongModDropdown != null) {
 			remove(editSongModDropdown);
 			add(editSongModDropdown);
@@ -723,6 +723,80 @@ class ModchartEditor extends MusicBeatState
 						} else {
 							if (FlxG.sound.music != null) FlxG.sound.music.stop();
 							FlxG.switchState(() -> new PlayState());
+						}
+				}
+			case "Edit":
+				switch (itemIndex)
+				{
+					case 0: // Copy
+						if (selectedPlacement != null) {
+							copiedPlacement = {
+								beat: selectedPlacement.beat,
+								modifierRef: selectedPlacement.modifierRef,
+								value: selectedPlacement.value,
+								type: selectedPlacement.type,
+								duration: selectedPlacement.duration,
+								ease: selectedPlacement.ease,
+								repeat: selectedPlacement.repeat
+							};
+						}
+					case 1: // Paste
+						if (copiedPlacement != null) {
+							var pasteBeat = Math.floor(curBeat / (beatSnap / 4)) * (beatSnap / 4);
+							if (getPlacementAt(copiedPlacement.modifierRef, pasteBeat) == null) {
+								var newP:TimelineModifierPlacement = {
+									beat: pasteBeat,
+									modifierRef: copiedPlacement.modifierRef,
+									value: copiedPlacement.value,
+									type: copiedPlacement.type,
+									duration: copiedPlacement.duration,
+									ease: copiedPlacement.ease,
+									repeat: copiedPlacement.repeat
+								};
+								timelinePlacements.push(newP);
+								timelinePlacements.sort(function(a, b) return Math.round((a.beat - b.beat) * 1000));
+								selectedPlacement = newP;
+								hasUnsavedChanges = true;
+							}
+						}
+					case 2: // Cut
+						if (selectedPlacement != null) {
+							copiedPlacement = {
+								beat: selectedPlacement.beat,
+								modifierRef: selectedPlacement.modifierRef,
+								value: selectedPlacement.value,
+								type: selectedPlacement.type,
+								duration: selectedPlacement.duration,
+								ease: selectedPlacement.ease,
+								repeat: selectedPlacement.repeat
+							};
+							timelinePlacements.remove(selectedPlacement);
+							selectedPlacement = null;
+							hasUnsavedChanges = true;
+						}
+					case 3: // Delete
+						if (selectedPlacement != null) {
+							timelinePlacements.remove(selectedPlacement);
+							selectedPlacement = null;
+							hasUnsavedChanges = true;
+						}
+					case 4: // Shift Left
+						if (selectedPlacement != null) {
+							var newBeat = selectedPlacement.beat - (beatSnap / 4);
+							if (newBeat >= 0 && getPlacementAt(selectedPlacement.modifierRef, newBeat) == null) {
+								selectedPlacement.beat = newBeat;
+								timelinePlacements.sort(function(a, b) return Math.round((a.beat - b.beat) * 1000));
+								hasUnsavedChanges = true;
+							}
+						}
+					case 5: // Shift Right
+						if (selectedPlacement != null) {
+							var newBeat = selectedPlacement.beat + (beatSnap / 4);
+							if (getPlacementAt(selectedPlacement.modifierRef, newBeat) == null) {
+								selectedPlacement.beat = newBeat;
+								timelinePlacements.sort(function(a, b) return Math.round((a.beat - b.beat) * 1000));
+								hasUnsavedChanges = true;
+							}
 						}
 				}
 			case "Modchart":
@@ -832,9 +906,9 @@ class ModchartEditor extends MusicBeatState
 		if (!songStarted) { startSong(); return; }
 		if (FlxG.sound.music != null)
 		{
+			if (vocals != null) vocals.time = FlxG.sound.music.time;
 			FlxG.sound.music.resume();
-			vocals.resume();
-			vocals.time = FlxG.sound.music.time;
+			if (vocals != null) vocals.resume();
 			Conductor.songPosition = FlxG.sound.music.time;
 			recalculateSteps();
 		}
@@ -1042,8 +1116,8 @@ class ModchartEditor extends MusicBeatState
 				selectedPlacement = null;
 				activeModifierType = "";
 				setEditionUIVisible(false);
-				if (modifierTimeline != null) modifierTimeline.loadPlacements();
 				refreshUnrolledPlacements();
+				if (modifierTimeline != null) modifierTimeline.loadPlacements();
 				updateEditionUI();
 			}
 		}
@@ -1104,7 +1178,7 @@ class ModchartEditor extends MusicBeatState
 		if (mouseY >= timelineWindowY && mouseY < FlxG.height && subState == null)
 		{
 			// 1. Mouse wheel zoom & vertical scroll
-			if (FlxG.mouse.wheel != 0)
+			if (FlxG.mouse.wheel != 0 && (editEaseDropdown == null || !editEaseDropdown.isOpen))
 			{
 				if (FlxG.keys.pressed.CONTROL)
 				{
@@ -1174,7 +1248,10 @@ class ModchartEditor extends MusicBeatState
 						if (targetTime < 0) targetTime = 0;
 						if (targetTime > songLen) targetTime = songLen;
 
-						if (FlxG.sound.music != null) FlxG.sound.music.time = targetTime;
+						if (FlxG.sound.music != null) {
+							if (FlxG.sound.music.playing) pauseSong();
+							FlxG.sound.music.time = targetTime;
+						}
 						if (vocals != null) vocals.time = targetTime;
 						Conductor.songPosition = targetTime;
 						recalculateSteps();
@@ -1218,26 +1295,6 @@ class ModchartEditor extends MusicBeatState
 							if (isDoubleClick)
 							{
 								var rowIndex = Math.floor(gridMouseY / EditorLayout.ROW_SIZE_Y);
-								if (rowIndex >= loadedModifiers.length)
-								{
-									var newModRef = activeModifierType;
-									if (newModRef == "" || newModRef == "songStart")
-									{
-										var availTypes = [];
-										for (key in ModifierRegistry.definitions.keys()) availTypes.push(key);
-										if (availTypes.length > 0) newModRef = availTypes[0];
-										else newModRef = "cameraZoom";
-									}
-									
-									loadedModifiers.push({
-										name: newModRef,
-										modifier: newModRef,
-										value: ModifierRegistry.getDefaultValue(newModRef),
-										type: "tween"
-									});
-									buildTimelineRows();
-									rowIndex = loadedModifiers.length - 1;
-								}
 
 								if (rowIndex >= 0 && rowIndex < loadedModifiers.length)
 								{
@@ -1326,8 +1383,8 @@ class ModchartEditor extends MusicBeatState
 						if (existing == null || existing == selectedPlacement) {
 							selectedPlacement.beat = hoverBeat;
 							selectedPlacement.modifierRef = newModRef;
-							if (modifierTimeline != null) modifierTimeline.loadPlacements();
 							refreshUnrolledPlacements();
+							if (modifierTimeline != null) modifierTimeline.loadPlacements();
 							updateEditionUI();
 						}
 					}
@@ -1382,7 +1439,10 @@ class ModchartEditor extends MusicBeatState
 					if (targetTime < 0) targetTime = 0;
 					if (targetTime > songLen) targetTime = songLen;
 
-					if (FlxG.sound.music != null) FlxG.sound.music.time = targetTime;
+					if (FlxG.sound.music != null) {
+						if (FlxG.sound.music.playing) pauseSong();
+						FlxG.sound.music.time = targetTime;
+					}
 					if (vocals != null) vocals.time = targetTime;
 					Conductor.songPosition = targetTime;
 					recalculateSteps();
@@ -1600,9 +1660,16 @@ class ModchartEditor extends MusicBeatState
 		}
 		for (i in 0...Conductor.bpmChangeMap.length)
 		{
-			if (sourceTime > Conductor.bpmChangeMap[i].songTime)
+			if (sourceTime >= Conductor.bpmChangeMap[i].songTime)
 				lastChange = Conductor.bpmChangeMap[i];
 		}
+		
+		if (lastChange.bpm > 0 && lastChange.bpm != Conductor.bpm) {
+			Conductor.changeBPM(lastChange.bpm);
+		} else if (lastChange.bpm == 0 && Conductor.bpm != PlayState.SONG.bpm) {
+			Conductor.changeBPM(PlayState.SONG.bpm);
+		}
+		
 		var rawStep = lastChange.stepTime + (sourceTime - lastChange.songTime) / Conductor.stepCrochet;
 		curStep = Std.int(rawStep);
 		curDecStep = rawStep;
@@ -1677,6 +1744,29 @@ class ModchartEditor extends MusicBeatState
 		var defVal = ModifierRegistry.getDefaultValue(modifierId);
 		var result = defVal;
 		var lastVal = defVal;
+
+		if (StringTools.startsWith(modifierId, "cameraBump")) {
+			var currentBump = 0.0;
+			if (songStartPlacement != null && songStartPlacement.modifierRef == modifierId) {
+				var durSteps = ((songStartPlacement.duration != null && songStartPlacement.duration > 0) ? songStartPlacement.duration : 1) * 4;
+				if (step >= -16.0 && step < -16.0 + durSteps) {
+					var t = (step - -16.0) / durSteps;
+					if (songStartPlacement.ease != null && songStartPlacement.ease != "linear") t = atoms.EaseUtils.fromName(songStartPlacement.ease)(t);
+					currentBump += songStartPlacement.value * (1.0 - t);
+				}
+			}
+			for (pl in unrolledPlacements) {
+				if (pl.modifierRef != modifierId) continue;
+				var placementStep = pl.beat * 4;
+				var durSteps:Float = ((pl.duration != null && pl.duration > 0) ? pl.duration : 1) * 4;
+				if (step >= placementStep && step < placementStep + durSteps) {
+					var t = (step - placementStep) / durSteps;
+					if (pl.ease != null && pl.ease != "linear") t = atoms.EaseUtils.fromName(pl.ease)(t);
+					currentBump += pl.value * (1.0 - t);
+				}
+			}
+			return currentBump;
+		}
 
 		if (songStartPlacement != null && songStartPlacement.modifierRef == modifierId)
 		{

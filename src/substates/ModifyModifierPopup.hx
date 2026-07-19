@@ -99,9 +99,9 @@ class ModifyModifierPopup extends FlxSubState
 		modifierDropdown.cameras = [cam];
 		add(modifierDropdown);
 
-		descText = new FlxText(px + 20, yOff + 75, POPUP_W - 40, getModifierDescription(selectedModifier), 10);
+		descText = new FlxText(px + 20, yOff + 70, POPUP_W - 40, getModifierDescription(selectedModifier), 10);
 		descText.alignment = "center";
-		descText.color = 0xFFAAAAAA;
+		descText.color = FlxColor.WHITE;
 		descText.scrollFactor.set(0, 0);
 		descText.cameras = [cam];
 		add(descText);
@@ -154,20 +154,22 @@ class ModifyModifierPopup extends FlxSubState
 	{
 		return switch (modId)
 		{
-			case "cameraZoom": "Zooms the camera in or out (1.0 is default).";
-			case "cameraBump": "Adds a temporary zoom bump to the camera (0.0 is default).";
-			case "cameracenter": "Centers the camera between Dad and BF (1 to enable).";
-			case "turnDad": "Forces the camera to focus on Dad (1 to enable).";
-			case "turnBf": "Forces the camera to focus on BF (1 to enable).";
-			case "trackSingDirections_dad": "Camera pans slightly when Dad sings (1 to enable).";
-			case "trackSingDirections_bf": "Camera pans slightly when BF sings (1 to enable).";
-			case "cameraFly": "Camera floats in an infinity loop shape. Higher values increase intensity.";
-			case "cameraAngle": "Tilts the camera (0 is default).";
-			case "cameraPosX": "Offsets the camera horizontally in pixels.";
-			case "cameraPosY": "Offsets the camera vertically in pixels.";
-			case "cameraFollowX": "Additional X offset for camera follow.";
-			case "cameraFollowY": "Additional Y offset for camera follow.";
-			default: "No description available.";
+			case "cameraZoom": "Zooms the camera in or out (1.0 is normal).\nExample: 1.2 (extra zoom)";
+			case "cameraBump": "Temporary zoom bump that returns to its original value.\nExample: 0.1 (light bump)";
+			case "cameraBumpX": "Horizontal camera bump that bounces back.\nExample: 50 (moves right)";
+			case "cameraBumpY": "Vertical camera bump that bounces back.\nExample: -50 (moves up)";
+			case "cameraBumpAngle": "Rotation bump that returns to 0.\nExample: 15 (tilts right)";
+			case "cameracenter": "Centers the camera between both characters.\nExample: 1 (enabled), 0 (disabled)";
+			case "turnDad": "Forces the camera to focus on the opponent.\nExample: 1 (enabled), 0 (disabled)";
+			case "turnBf": "Forces the camera to focus on the player.\nExample: 1 (enabled), 0 (disabled)";
+			case "trackSingDirections_dad": "Camera pans slightly when the opponent sings.\nExample: 1 (enabled)";
+			case "trackSingDirections_bf": "Camera pans slightly when the player sings.\nExample: 1 (enabled)";
+			case "cameraFly": "Camera floats in an infinity loop shape.\nExample: 1 (normal intensity), 2 (fast)";
+			case "cameraAngle": "Tilts the screen in degrees.\nExample: 15 (right), -15 (left)";
+			case "cameraPosX": "Offsets the screen horizontally in pixels.\nExample: 100 (right)";
+			case "cameraPosY": "Offsets the screen vertically in pixels.\nExample: -100 (up)";
+
+			default: "No description available.\nExample: N/A";
 		};
 	}
 
