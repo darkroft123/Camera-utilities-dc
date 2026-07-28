@@ -2,17 +2,22 @@ package atoms;
 
 class EaseUtils
 {
+	public static var _cache:Map<String, (Float)->Float> = new Map();
+
 	public static function fromName(name:String):(Float) -> Float
 	{
 		if (name == null) return flixel.tweens.FlxEase.linear;
-		return switch (name.toLowerCase())
+		var lowerName = name.toLowerCase();
+		if (_cache.exists(lowerName)) return _cache.get(lowerName);
+
+		var ease = switch (lowerName)
 		{
 			case "quadin": flixel.tweens.FlxEase.quadIn;
 			case "quadout": flixel.tweens.FlxEase.quadOut;
 			case "quadinout": flixel.tweens.FlxEase.quadInOut;
-			case "cubein": flixel.tweens.FlxEase.cubeIn;
-			case "cubeout": flixel.tweens.FlxEase.cubeOut;
-			case "cubeinout": flixel.tweens.FlxEase.cubeInOut;
+			case "cubicin": flixel.tweens.FlxEase.cubeIn;
+			case "cubicout": flixel.tweens.FlxEase.cubeOut;
+			case "cubicinout": flixel.tweens.FlxEase.cubeInOut;
 			case "quartin": flixel.tweens.FlxEase.quartIn;
 			case "quartout": flixel.tweens.FlxEase.quartOut;
 			case "quartinout": flixel.tweens.FlxEase.quartInOut;
@@ -46,10 +51,12 @@ class EaseUtils
 			case "classic": function(t:Float) return 1 - Math.pow(1 - 0.04, t * 60);
 			default: flixel.tweens.FlxEase.linear;
 		}
+		_cache.set(lowerName, ease);
+		return ease;
 	}
 
 	public static var list:Array<String> = [
-		"linear", "quadOut", "quadIn", "quadInOut", "cubeOut", "cubeIn", "cubeInOut",
+		"linear", "quadOut", "quadIn", "quadInOut", "cubicOut", "cubicIn", "cubicInOut",
 		"quartOut", "quartIn", "quartInOut", "quintOut", "quintIn", "quintInOut",
 		"sineOut", "sineIn", "sineInOut", "expoOut", "expoIn", "expoInOut",
 		"backOut", "backIn", "backInOut", "bounceOut", "bounceIn", "bounceInOut",

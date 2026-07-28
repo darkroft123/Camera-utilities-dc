@@ -16,6 +16,7 @@ class CameraEventHandler
 	public var modifiers:Array<ModifierEntry>;
 	public var placements:Array<TimelineModifierPlacement>;
 	public var songStart:camera.ModchartData.SongStartData;
+	public var evaluator:camera.utilities.ModifierEvaluator;
 	public var camGame:FlxCamera;
 	public var camHUD:FlxCamera;
 
@@ -31,6 +32,11 @@ class CameraEventHandler
 	public var followDisabled:Bool = false;
 	
 	// Variables to recover base camera state and apply un-lerped offsets
+	var turnAngleOffset:Float = 0;
+	var lastP1X:Float = -9999;
+	var lastP1Y:Float = -9999;
+	var lastP2X:Float = -9999;
+	var lastP2Y:Float = -9999;
 	var lastOffsetX:Float = 0;
 	var lastOffsetY:Float = 0;
 	var lastExtraZoom:Float = 0;
@@ -70,139 +76,16 @@ class CameraEventHandler
 			}
 		}
 		
-		this.placements = finalPlacements;
-		this.placements.sort(function(a, b) return (a.beat < b.beat) ? -1 : ((a.beat > b.beat) ? 1 : 0));
-		
 		this.songStart = data.songStart;
 		this.camGame = camGame;
 		this.camHUD = camHUD;
-	}
 
-	function getModifierValue(modifierId:String, step:Float):Float
-	{
-		var defVal = ModifierRegistry.getDefaultValue(modifierId);
-		if (modifiers != null) {
-			for (m in modifiers) {
-				if (m.modifier == modifierId) {
-					defVal = m.value;
-					break;
-				}
-			}
-		}
-		var result = defVal;
-		var lastVal = defVal;
-
-		if (StringTools.startsWith(modifierId, "cameraBump")) {
-			var currentBump = 0.0;
-			if (this.songStart != null && this.songStart.modifierRef == modifierId) {
-				var durSteps = ((this.songStart.duration != null && this.songStart.duration > 0) ? this.songStart.duration : 1) * 4;
-				if (step >= -16.0 && step < -16.0 + durSteps) {
-					var t = (step - -16.0) / durSteps;
-					if (this.songStart.ease != null && this.songStart.ease != "linear") t = EaseUtils.fromName(this.songStart.ease)(t);
-					currentBump += this.songStart.value * (1.0 - t);
-				}
-			}
-			for (pl in placements) {
-				if (pl.modifierRef != modifierId) continue;
-				var placementStep = pl.beat * 4;
-				var durSteps:Float = ((pl.duration != null && pl.duration > 0) ? pl.duration : 1) * 4;
-				if (step >= placementStep && step < placementStep + durSteps) {
-					var t = (step - placementStep) / durSteps;
-					if (pl.ease != null && pl.ease != "linear") t = EaseUtils.fromName(pl.ease)(t);
-					currentBump += pl.value * (1.0 - t);
-				}
-			}
-			return currentBump;
-		}
-
-		if (this.songStart != null && this.songStart.modifierRef == modifierId)
-		{
-			var durBeats:Float = (this.songStart.duration != null && this.songStart.duration > 0) ? this.songStart.duration : 1;
-			var durSteps = durBeats * 4;
-			var startStep = -16.0;
-
-			if (step >= startStep + durSteps) {
-				result = this.songStart.value;
-				lastVal = result;
-				if (modifierId == "cameracenter") trace("songStart cameracenter finished! Value: " + result);
-			} else if (step >= startStep && step < startStep + durSteps) {
-				if (this.songStart.type == "tween") {
-					var t = (step - startStep) / durSteps;
-					if (this.songStart.ease != null && this.songStart.ease != "linear") t = EaseUtils.fromName(this.songStart.ease)(t);
-					var ret = lastVal + (this.songStart.value - lastVal) * t;
-					if (modifierId == "cameracenter") trace("songStart cameracenter tweening: " + ret + " (step: " + step + ")");
-					return ret;
-				} else {
-					result = this.songStart.value;
-					lastVal = result;
-					if (modifierId == "cameracenter") trace("songStart cameracenter set active! Value: " + result);
-				}
-			}
-		}
-
-		for (pl in placements)
-		{
-			if (pl.modifierRef != modifierId) continue;
-			var placementStep = pl.beat * 4;
-			var durSteps:Float = ((pl.duration != null && pl.duration > 0) ? pl.duration : 1) * 4;
-
-			if (step < placementStep) {
-				if (pl.beat <= 0 && pl.type == "set") {
-					result = pl.value;
-				}
-				break;
-			}
-
-			if (pl.type == "set" || step >= placementStep + durSteps) {
-				result = pl.value;
-				lastVal = result;
-			} else {
-				var t = (step - placementStep) / durSteps;
-				if (pl.ease != null && pl.ease != "linear") t = EaseUtils.fromName(pl.ease)(t);
-				result = lastVal + (pl.value - lastVal) * t;
-				break;
-			}
-		}
-		return result;
-	}
-
-	public function isTweenActive(step:Float, modifierIds:Array<String>):Bool
-	{
-		if (songStart != null && modifierIds.indexOf(songStart.modifierRef) != -1)
-		{
-			var startStep = -16.0;
-			var durSteps = ((songStart.duration != null && songStart.duration > 0) ? songStart.duration : 1) * 4;
-			if (step >= startStep && step <= startStep + durSteps) return true;
-		}
-		for (pl in placements)
-		{
-			if (modifierIds.indexOf(pl.modifierRef) == -1) continue;
-			var placementStep = pl.beat * 4;
-			var durSteps:Float = ((pl.duration != null && pl.duration > 0) ? pl.duration : 1) * 4;
-			if (step >= placementStep && step <= placementStep + durSteps) return true;
-		}
-		return false;
+		evaluator = new camera.utilities.ModifierEvaluator(modifiers, finalPlacements, songStart);
 	}
 
 	public function getCameraData(step:Float):CameraEventData
 	{
-		var data = new CameraEventData();
-		data.camZoom = getModifierValue("cameraZoom", step);
-		data.cameraBump = getModifierValue("cameraBump", step);
-		data.cameraBumpX = getModifierValue("cameraBumpX", step);
-		data.cameraBumpY = getModifierValue("cameraBumpY", step);
-		data.cameraBumpAngle = getModifierValue("cameraBumpAngle", step);
-		data.camAngle = getModifierValue("cameraAngle", step);
-		data.camPosX = getModifierValue("cameraPosX", step);
-		data.camPosY = getModifierValue("cameraPosY", step);
-		data.turnDad = getModifierValue("turnDad", step) + getModifierValue("turn", step);
-		data.turnBf = getModifierValue("turnBf", step) + getModifierValue("turn", step);
-		data.camCenter = getModifierValue("cameracenter", step);
-		data.trackDad = Math.max(getModifierValue("trackSingDirections_dad", step), getModifierValue("trackSingDirections", step));
-		data.trackBf = Math.max(getModifierValue("trackSingDirections_bf", step), getModifierValue("trackSingDirections", step));
-		data.cameraFly = getModifierValue("cameraFly", step);
-		data.hasTween = isTweenActive(step, ["cameraPosX", "cameraPosY", "cameracenter", "turnDad", "turnBf", "cameraZoom", "cameraAngle"]);
-		return data;
+		return evaluator.evaluateAllCameraData(step);
 	}
 
 	public function computeTarget(data:CameraEventData):Void
@@ -231,6 +114,35 @@ class CameraEventHandler
 				var p1Y = bfMid.y;
 				var p2X = dadMid.x;
 				var p2Y = dadMid.y;
+
+				var bfValid = true;
+				var dadValid = true;
+				
+				try {
+					if (mainBf.cameras != null && mainBf.cameras.indexOf(camGame) == -1) bfValid = false;
+					if (mainBf.scrollFactor != null && mainBf.scrollFactor.x == 0 && mainBf.scrollFactor.y == 0) bfValid = false;
+				} catch(e:Dynamic) {}
+				
+				if (bfValid || lastP1X == -9999) {
+					lastP1X = p1X;
+					lastP1Y = p1Y;
+				} else {
+					p1X = lastP1X;
+					p1Y = lastP1Y;
+				}
+				
+				try {
+					if (mainDad.cameras != null && mainDad.cameras.indexOf(camGame) == -1) dadValid = false;
+					if (mainDad.scrollFactor != null && mainDad.scrollFactor.x == 0 && mainDad.scrollFactor.y == 0) dadValid = false;
+				} catch(e:Dynamic) {}
+				
+				if (dadValid || lastP2X == -9999) {
+					lastP2X = p2X;
+					lastP2Y = p2Y;
+				} else {
+					p2X = lastP2X;
+					p2Y = lastP2Y;
+				}
 
 				if (stage != null) {
 					var p1CamOff = Reflect.getProperty(stage, "p1_Cam_Offset");
@@ -302,10 +214,10 @@ class CameraEventHandler
 					else if (animName.indexOf('singdown') != -1) targetSingOffsetY += singOffset;
 				}
 				if (data.trackDad >= 0.5) {
-					applyDirOffset(getTrackChar(dad), true);
+					applyDirOffset(dad, true);
 				}
 				if (data.trackBf >= 0.5) {
-					applyDirOffset(getTrackChar(boyfriend), false);
+					applyDirOffset(boyfriend, false);
 				}
 			} catch(e:Dynamic) {
 				targetX = FlxG.width * 0.5;
@@ -380,28 +292,32 @@ class CameraEventHandler
 		camHUD.zoom = FlxMath.lerp(camHUD.zoom, defaultHudCamZoom, hudLerp);
 	}
 
+	function getFieldSafe(obj:Dynamic, fields:Array<String>):Dynamic {
+		for (f in fields) {
+			var val = Reflect.field(obj, f);
+			if (val == null) {
+				var cls = Type.getClass(obj);
+				if (cls != null) val = Reflect.field(cls, f);
+			}
+			if (val != null) return val;
+		}
+		return null;
+	}
+
 	public function update(elapsed:Float, curDecStep:Float, defaultCamZoom:Float, defaultHudCamZoom:Float, cameraZoomSpeed:Float):Void
 	{
-		if (dad == null || boyfriend == null) {
-			var state:Dynamic = FlxG.state;
-			if (state != null) {
-				try {
-					if (dad == null) {
-						dad = Reflect.field(state, "dad");
-						if (dad == null) dad = Reflect.field(state, "dadCharacter");
-						if (dad == null) dad = Reflect.field(state, "player2");
-					}
-					if (boyfriend == null) {
-						boyfriend = Reflect.field(state, "boyfriend");
-						if (boyfriend == null) boyfriend = Reflect.field(state, "bf");
-						if (boyfriend == null) boyfriend = Reflect.field(state, "player1");
-					}
-					if (stage == null) {
-						stage = Reflect.field(state, "stage");
-						if (stage == null) stage = Reflect.field(state, "stageGroup");
-					}
-				} catch(e:Dynamic) {}
-			}
+		var state:Dynamic = FlxG.state;
+		if (state != null) {
+			try {
+				var newDad = getFieldSafe(state, ["dad", "dadCharacter", "player2"]);
+				if (newDad != null) dad = newDad;
+				
+				var newBf = getFieldSafe(state, ["boyfriend", "bf", "player1"]);
+				if (newBf != null) boyfriend = newBf;
+				
+				var newStage = getFieldSafe(state, ["stage", "stageGroup"]);
+				if (newStage != null) stage = newStage;
+			} catch(e:Dynamic) {}
 		}
 
 		var data = getCameraData(curDecStep);

@@ -142,6 +142,7 @@ class ModchartEditor extends MusicBeatState
 	public var dragStartMouseY:Float = 0;
 
 	public var unrolledPlacements:Array<camera.ModchartData.TimelineModifierPlacement> = [];
+	public var evaluator:camera.utilities.ModifierEvaluator;
 
 	public function refreshUnrolledPlacements():Void
 	{
@@ -168,6 +169,12 @@ class ModchartEditor extends MusicBeatState
 			}
 		}
 		unrolledPlacements.sort(function(a, b) return (a.beat < b.beat) ? -1 : ((a.beat > b.beat) ? 1 : 0));
+		
+		if (evaluator == null) {
+			evaluator = new camera.utilities.ModifierEvaluator(loadedModifiers, unrolledPlacements, songStartPlacement);
+		} else {
+			evaluator.refresh(loadedModifiers, unrolledPlacements, songStartPlacement);
+		}
 	}
 
 	var lastScreenWidth:Int = 0;
@@ -595,7 +602,7 @@ class ModchartEditor extends MusicBeatState
 		menus = [
 			{name:"File", items:["Save","Save As","Import Events","Auto Save (OFF)","Exit"]},
 			{name:"Edit", items:["Copy","Paste","Cut","Delete","Shift Selection Left","Shift Selection Right"]},
-			{name:"Modchart", items:["Create Modifier"]},
+			{name:"Modchart", items:["Create Modifier", "Delete Modifier"]},
 			{name:"View", items:["Fullscreen","Swap Scroll"]},
 			{name:"Playback", items:["Play/Pause","+ speed 25%","reset speed","- speed 25%"]},
 			{name:"Song", items:["Go back to the start","Go to the end","Mute Inst","Mute Vocals"]},
@@ -803,6 +810,7 @@ class ModchartEditor extends MusicBeatState
 				switch (itemIndex)
 				{
 					case 0: openModifierEditor();
+					case 1: openDeleteModifierEditor();
 				}
 			case "View":
 				switch (itemIndex)
@@ -1716,107 +1724,73 @@ class ModchartEditor extends MusicBeatState
 		}
 		for (defId in ModifierRegistry.definitions.keys())
 		{
-			var val = getModifierValue(defId, step);
+			var val = evaluator != null ? evaluator.getModifierValue(defId, step) : ModifierRegistry.getDefaultValue(defId);
 			ModifierRegistry.applyModifier(defId, val, this);
 		}
-		if (editorPreview != null) editorPreview.hasTween = isTweenActive(step);
-	}
+		if (evaluator == null) return;
+		var data = evaluator.evaluateAllCameraData(step);
 
-	function isTweenActive(step:Float):Bool
-	{
-		if (songStartPlacement != null)
-		{
-			var startStep = -16.0;
-			var durSteps = ((songStartPlacement.duration != null && songStartPlacement.duration > 0) ? songStartPlacement.duration : 1) * 4;
-			if (step >= startStep && step <= startStep + durSteps) return true;
+		if (editorPreview != null) {
+			editorPreview.modZoom = data.camZoom;
+			editorPreview.modBump = data.cameraBump;
+			editorPreview.modBumpX = data.cameraBumpX;
+			editorPreview.modBumpY = data.cameraBumpY;
+			editorPreview.modBumpAngle = data.cameraBumpAngle;
+			editorPreview.modAngle = data.camAngle;
+			editorPreview.modPosX = data.camPosX;
+			editorPreview.modPosY = data.camPosY;
+			editorPreview.turnDad = data.turnDad;
+			editorPreview.turnBf = data.turnBf;
+			editorPreview.centerCamera = (data.camCenter >= 0.5);
+			editorPreview.trackDad = (data.trackDad >= 0.5);
+			editorPreview.trackBf = (data.trackBf >= 0.5);
+			editorPreview.cameraFly = data.cameraFly;
+			editorPreview.hasTween = data.hasTween;
 		}
-		for (pl in unrolledPlacements)
-		{
-			var placementStep = pl.beat * 4;
-			var durSteps:Float = ((pl.duration != null && pl.duration > 0) ? pl.duration : 1) * 4;
-			if (step >= placementStep && step <= placementStep + durSteps) return true;
-		}
-		return false;
-	}
-
-	public function getModifierValue(modifierId:String, step:Float):Float
-	{
-		var defVal = ModifierRegistry.getDefaultValue(modifierId);
-		var result = defVal;
-		var lastVal = defVal;
-
-		if (StringTools.startsWith(modifierId, "cameraBump")) {
-			var currentBump = 0.0;
-			if (songStartPlacement != null && songStartPlacement.modifierRef == modifierId) {
-				var durSteps = ((songStartPlacement.duration != null && songStartPlacement.duration > 0) ? songStartPlacement.duration : 1) * 4;
-				if (step >= -16.0 && step < -16.0 + durSteps) {
-					var t = (step - -16.0) / durSteps;
-					if (songStartPlacement.ease != null && songStartPlacement.ease != "linear") t = atoms.EaseUtils.fromName(songStartPlacement.ease)(t);
-					currentBump += songStartPlacement.value * (1.0 - t);
-				}
-			}
-			for (pl in unrolledPlacements) {
-				if (pl.modifierRef != modifierId) continue;
-				var placementStep = pl.beat * 4;
-				var durSteps:Float = ((pl.duration != null && pl.duration > 0) ? pl.duration : 1) * 4;
-				if (step >= placementStep && step < placementStep + durSteps) {
-					var t = (step - placementStep) / durSteps;
-					if (pl.ease != null && pl.ease != "linear") t = atoms.EaseUtils.fromName(pl.ease)(t);
-					currentBump += pl.value * (1.0 - t);
-				}
-			}
-			return currentBump;
-		}
-
-		if (songStartPlacement != null && songStartPlacement.modifierRef == modifierId)
-		{
-			var durBeats:Float = (songStartPlacement.duration != null && songStartPlacement.duration > 0) ? songStartPlacement.duration : 1;
-			var durSteps = durBeats * 4;
-			var startStep = -16.0;
-
-			if (step >= startStep + durSteps) {
-				result = songStartPlacement.value;
-				lastVal = result;
-			} else if (step >= startStep && step < startStep + durSteps) {
-				if (songStartPlacement.type == "tween") {
-					var t = (step - startStep) / durSteps;
-					if (songStartPlacement.ease != null && songStartPlacement.ease != "linear") t = atoms.EaseUtils.fromName(songStartPlacement.ease)(t);
-					return lastVal + (songStartPlacement.value - lastVal) * t;
-				} else {
-					result = songStartPlacement.value;
-					lastVal = result;
-				}
-			}
-		}
-
-		for (pl in unrolledPlacements)
-		{
-			if (pl.modifierRef != modifierId) continue;
-			var placementStep = pl.beat * 4;
-			var durSteps:Float = ((pl.duration != null && pl.duration > 0) ? pl.duration : 1) * 4;
-			
-			if (step < placementStep) {
-				if (pl.beat <= 0 && pl.type == "set") {
-					result = pl.value;
-				}
-				break;
-			}
-
-			if (step >= placementStep + durSteps || pl.type == "set") {
-				result = pl.value;
-				lastVal = result;
-			} else {
-				var t = (step - placementStep) / durSteps;
-				if (pl.ease != null && pl.ease != "linear") t = atoms.EaseUtils.fromName(pl.ease)(t);
-				return lastVal + (pl.value - lastVal) * t;
-			}
-		}
-		return result;
 	}
 
 	public function openModifierEditor():Void
 	{
-		openSubState(new ModifyModifierPopup(this));
+		openSubState(new substates.ModifyModifierPopup(this));
+	}
+
+	public function openDeleteModifierEditor():Void
+	{
+		openSubState(new substates.DeleteModifierPopup(this));
+	}
+
+	public function deleteLoadedModifier(modifierName:String):Void
+	{
+		var toDeleteInfo = null;
+		for (info in loadedModifiers) {
+			if (info.name == modifierName) {
+				toDeleteInfo = info;
+				break;
+			}
+		}
+		
+		if (toDeleteInfo != null) {
+			loadedModifiers.remove(toDeleteInfo);
+			
+			// Remove all placements for this modifier
+			var i = timelinePlacements.length;
+			while (--i >= 0) {
+				if (timelinePlacements[i].modifierRef == toDeleteInfo.name || timelinePlacements[i].modifierRef == toDeleteInfo.modifier) {
+					timelinePlacements.splice(i, 1);
+				}
+			}
+			
+			if (selectedPlacement != null && (selectedPlacement.modifierRef == toDeleteInfo.name || selectedPlacement.modifierRef == toDeleteInfo.modifier)) {
+				selectedPlacement = null;
+			}
+			
+			if (songStartPlacement != null && (songStartPlacement.modifierRef == toDeleteInfo.name || songStartPlacement.modifierRef == toDeleteInfo.modifier)) {
+				songStartPlacement = null;
+			}
+			
+			hasUnsavedChanges = true;
+			buildTimelineRows();
+		}
 	}
 
 	public function getCameraEventsPath():String
