@@ -23,6 +23,7 @@ class ModifierTimeline extends FlxGroup
 
 	public var modifierBlocks:FlxTypedGroup<ModifierBlock>;
 	public var beatLabels:FlxTypedGroup<FlxText>;
+	public var gridLines:FlxTypedGroup<FlxSprite>;
 
 	public var state:ModchartEditor;
 	var lastSongLen:Float = 0;
@@ -42,8 +43,15 @@ class ModifierTimeline extends FlxGroup
 		gridSprite.makeGraphic(gridW, gridH, 0xFF2A2A3E, true);
 		gridSprite.scrollFactor.set(1, 1);
 		gridSprite.cameras = [state.camTimeline];
-		drawGrid();
 		add(gridSprite);
+
+		gridLines = new FlxTypedGroup<FlxSprite>();
+		add(gridLines);
+
+		beatLabels = new FlxTypedGroup<FlxText>();
+		add(beatLabels);
+
+		drawGrid();
 
 		// Cursor line
 		cursorLine = new FlxSprite(0, 0);
@@ -54,30 +62,24 @@ class ModifierTimeline extends FlxGroup
 
 		modifierBlocks = new FlxTypedGroup<ModifierBlock>();
 		add(modifierBlocks);
-
-		beatLabels = new FlxTypedGroup<FlxText>();
-		add(beatLabels);
 	}
 
 	public function drawGrid():Void
 	{
-		var pixels = gridSprite.pixels;
-		pixels.fillRect(pixels.rect, 0xFF191524); // clear background
-
 		var gridW = EditorLayout.GRID_COL_W;
 		var gridH = Std.int(gridSprite.height);
 		
-		// visible beat range based on current scroll
 		var startBeat:Int = Std.int(Math.max(0, Math.floor(scrollX / zoomX)));
 		var endBeat:Int = Std.int(Math.ceil((scrollX + gridW) / zoomX)) + 1;
 
-		var beatLineColor = 0x33FFFFFF; // semi-transparent white for beats
-		var sectionLineColor = 0x66FFFFFF; // brighter white for 4-beat measures
+		var beatLineColor = 0x33FFFFFF;
+		var sectionLineColor = 0x66FFFFFF;
 
-		if (beatLabels != null) {
-			beatLabels.forEachAlive(function(txt:FlxText) { txt.visible = false; });
-		}
+		if (beatLabels != null) beatLabels.forEachAlive(function(txt:FlxText) { txt.visible = false; });
+		if (gridLines != null) gridLines.forEachAlive(function(spr:FlxSprite) { spr.visible = false; });
+
 		var labelIndex = 0;
+		var lineIndex = 0;
 
 		for (i in startBeat...endBeat)
 		{
@@ -88,8 +90,25 @@ class ModifierTimeline extends FlxGroup
 			var color = isSection ? sectionLineColor : beatLineColor;
 			var lineW = isSection ? 2 : 1;
 
-			var fillRect = new openfl.geom.Rectangle(xPos, 0, lineW, gridH);
-			pixels.fillRect(fillRect, color);
+			var lineSpr:FlxSprite = null;
+			if (lineIndex >= gridLines.length)
+			{
+				lineSpr = new FlxSprite(xPos, 0);
+				lineSpr.makeGraphic(1, gridH, 0xFFFFFFFF);
+				lineSpr.scrollFactor.set(0, 1);
+				lineSpr.cameras = [state.camTimeline];
+				gridLines.add(lineSpr);
+			}
+			else
+			{
+				lineSpr = gridLines.members[lineIndex];
+			}
+			lineSpr.x = xPos;
+			lineSpr.scale.x = lineW;
+			lineSpr.updateHitbox();
+			lineSpr.color = color;
+			lineSpr.visible = true;
+			lineIndex++;
 
 			if (isSection && beatLabels != null)
 			{
@@ -98,7 +117,7 @@ class ModifierTimeline extends FlxGroup
 				{
 					txt = new FlxText(xPos + 2, gridH - 16, 40, Std.string(i), 12);
 					txt.setFormat(Paths.font("vcr.ttf"), 12, 0xFFFFFFFF, "left");
-					txt.scrollFactor.set(0, 0); // stay locked vertically to camera
+					txt.scrollFactor.set(0, 0);
 					txt.cameras = [state.camTimeline];
 					beatLabels.add(txt);
 				}
@@ -113,7 +132,6 @@ class ModifierTimeline extends FlxGroup
 				labelIndex++;
 			}
 		}
-		gridSprite.dirty = true;
 	}
 
 	override public function update(elapsed:Float):Void
@@ -122,9 +140,15 @@ class ModifierTimeline extends FlxGroup
 
 		var bpm = (Conductor.bpm > 0) ? Conductor.bpm : 120;
 		var crochet = (60 / bpm) * 1000;
-		var curTime = Conductor.songPosition;
 		
-		// Calculate scrollX to center the current song playback position
+		// Attempt to get noteOffset from backend or preferences
+		var noteOffset:Float = 0;
+		try {
+			var pref = Reflect.getProperty(Type.resolveClass("backend.ClientPrefs"), "data");
+			if (pref != null && Reflect.hasField(pref, "noteOffset")) noteOffset = Reflect.field(pref, "noteOffset");
+		} catch(e:Dynamic) {}
+
+		var curTime = Conductor.songPosition - noteOffset;
 		var curBeat = curTime / crochet;
 		var cursorTimelineX = curBeat * zoomX;
 		var gridW = EditorLayout.GRID_COL_W;
